@@ -165,11 +165,6 @@ class AdsController extends ChangeNotifier {
       },
       onAdDismissedFullScreenContent: (ad) async {
         debugPrint('🎬 Video Iklan AdMob ditutup (earnedReward: $earnedReward).');
-        try {
-          ad.dispose();
-        } catch (e) {
-          debugPrint('Info dispose ad: $e');
-        }
         _rewardedAd = null;
 
         // Tunggu 250ms untuk memastikan callback onUserEarnedReward dari SDK selesai masuk
@@ -184,7 +179,15 @@ class AdsController extends ChangeNotifier {
         if (!completer.isCompleted) {
           completer.complete(earnedReward);
         }
-        Future.delayed(const Duration(milliseconds: 800), () {
+
+        // Dispose ad dan preload iklan berikutnya setelah transisi Activity selesai penuh (1.2 detik)
+        // untuk mencegah crash surface OpenGL di emulator Android
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          try {
+            ad.dispose();
+          } catch (e) {
+            debugPrint('Info dispose ad: $e');
+          }
           _preloadRewardedAd();
         });
       },
