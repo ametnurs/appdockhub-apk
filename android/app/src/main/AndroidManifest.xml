@@ -21,10 +21,9 @@
     <application
         android:label="AppDock Hub"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@android:drawable/sym_def_app_icon">
 
-        <!-- Google AdMob Application ID (Ganti dengan App ID AdMob Asli Anda sebelum rilis) -->
-        <!-- Sample Test App ID Google: ca-app-pub-3940256099942544~3347511713 -->
+        <!-- Google AdMob Application ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
