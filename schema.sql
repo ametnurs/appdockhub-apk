@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     balance_ads REAL DEFAULT 0.0,        -- Saldo Akumulasi Nonton Iklan Rewarded
     ads_watched_today INTEGER DEFAULT 0, -- Counter nonton iklan harian (Maks 10)
     last_ad_watch_date TEXT,             -- Format: YYYY-MM-DD untuk auto-reset harian
+    max_level INTEGER DEFAULT 1,         -- Level tertinggi game yang diselesaikan
+    last_milestone_awarded INTEGER DEFAULT 0, -- Milestone kelipatan 10 terakhir yang sudah dikirim ke sponsor
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

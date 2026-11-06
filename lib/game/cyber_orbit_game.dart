@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/ads_controller.dart';
 import '../services/currency_service.dart';
@@ -95,12 +96,67 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
           _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
         }
       } else if (event == 'LEVEL_CLEARED') {
-        debugPrint('🎉 Level ${data['level']} Selesai! Skor: ${data['score']}');
+        final level = (data['level'] is int) ? data['level'] as int : int.tryParse('${data['level']}') ?? 1;
+        debugPrint('🎉 Level $level Selesai! Skor: ${data['score']}');
+        _notifyLevelCleared(level);
       } else if (event == 'GAME_OVER') {
         debugPrint('💥 Game Over di Level ${data['level']}');
       }
     } catch (e) {
       debugPrint('Error parsing bridge message: $e');
+    }
+  }
+
+  /// Melaporkan penyelesaian level ke backend Cloudflare D1
+  /// Menghitung milestone kelipatan 10 (Lvl 10 = Rp100, Lvl 20..100 = Rp50) untuk sponsor
+  Future<void> _notifyLevelCleared(int level) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${widget.adsController.backendBaseUrl}/api/game/level-cleared'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'pairToken': widget.adsController.pairToken,
+          'level': level,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final resData = jsonDecode(response.body);
+        if (resData['milestoneAwarded'] == true && mounted) {
+          final bonus = resData['milestoneBonus'] ?? 50;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF00E676),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+              content: Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Colors.white, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🎯 Milestone Level $level Tercapai!',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        Text(
+                          'Sponsor pengundang Anda mendapatkan bonus referral Rp $bonus!',
+                          style: const TextStyle(fontSize: 12, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error reporting level cleared: $e');
     }
   }
 

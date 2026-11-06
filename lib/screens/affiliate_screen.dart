@@ -81,6 +81,79 @@ class AffiliateScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // Card Hadiah Milestone Level Game Referral (Level 10 - 100)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF064E3B), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.videogame_asset_rounded, color: Color(0xFF10B981), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Bonus Milestone Game Referral',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMilestoneRow(
+                    'Level 10 Referral',
+                    'Rp 100',
+                    'Diberikan saat referral Anda menyelesaikan Level 10.',
+                    const Color(0xFF10B981),
+                  ),
+                  const Divider(color: Colors.white12, height: 20),
+                  _buildMilestoneRow(
+                    'Level 20 - 100 (+50/10 Lvl)',
+                    'Rp 50/step',
+                    'Setiap kelipatan 10 level (20, 30, ... 100) dapat Rp 50!',
+                    const Color(0xFF34D399),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: Color(0xFF10B981), size: 16),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Total potensi bonus: Rp 550 per pemain aktif referral Anda!',
+                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Card Link Referral Pribadi
             Container(
               padding: const EdgeInsets.all(18),
@@ -196,6 +269,38 @@ class AffiliateScreen extends StatelessWidget {
                   Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   const Spacer(),
                   Text(rupiah, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMilestoneRow(String title, String reward, String subtitle, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+          child: Center(
+            child: Icon(Icons.military_tech_rounded, color: color, size: 24),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  const Spacer(),
+                  Text(reward, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
                 ],
               ),
               const SizedBox(height: 2),

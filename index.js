@@ -114,6 +114,13 @@ export default {
       }
 
       // ----------------------------------------------------------------------
+      // ROUTE 3B: POST /api/game/level-cleared -> BONUS MILESTONE REFERRAL GAME
+      // ----------------------------------------------------------------------
+      if (url.pathname === '/api/game/level-cleared' && request.method === 'POST') {
+        return await handleGameLevelCleared(request, env);
+      }
+
+      // ----------------------------------------------------------------------
       // ROUTE 4: GET /verify -> CEK STATUS LISENSI HWID OLEH DESKTOP/APK
       // ----------------------------------------------------------------------
       if (url.pathname === '/verify') {
@@ -358,6 +365,79 @@ async function handleAdsReward(request, env) {
 }
 
 // ============================================================================
+// 2B. HANDLER MILESTONE REFERRAL GAME (LEVEL 10 = RP 100, TIAP 10 LVL = RP 50)
+// ============================================================================
+async function handleGameLevelCleared(request, env) {
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ success: false, message: 'Invalid payload' }, 400);
+  }
+
+  const pairToken = (body.pairToken || '').trim();
+  const level = parseInt(body.level) || 0;
+
+  if (!pairToken || level <= 0) {
+    return jsonResponse({ success: false, message: 'pairToken & valid level required' }, 400);
+  }
+
+  if (!env.DB) {
+    return jsonResponse({ success: true, level });
+  }
+
+  const user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
+  if (!user) {
+    return jsonResponse({ success: true, level });
+  }
+
+  // Update max_level user
+  const curMax = user.max_level || 1;
+  const newMax = Math.max(curMax, level);
+  await env.DB.prepare('UPDATE users SET max_level = ? WHERE app_pair_token = ?').bind(newMax, pairToken).run();
+
+  // Cek apakah mencapai milestone kelipatan 10 (Level 10, 20, 30, ... maks 100)
+  if (level % 10 === 0 && level <= 100) {
+    const lastAwarded = user.last_milestone_awarded || 0;
+    if (lastAwarded < level) {
+      // Aturan: Level 10 dapat Rp 100, selanjutnya tiap 10 level dapat Rp 50
+      const milestoneBonus = (level === 10) ? 100 : 50;
+
+      // Berikan reward ke Sponsor (referrer_id) jika ada
+      if (user.referrer_id && user.referrer_id !== user.telegram_id) {
+        await env.DB.prepare(
+          'UPDATE users SET balance_team = balance_team + ? WHERE telegram_id = ?'
+        ).bind(milestoneBonus, user.referrer_id).run();
+
+        const playerName = user.telegram_id && !user.telegram_id.startsWith('temp_')
+            ? `ID: ${user.telegram_id}`
+            : 'Referral Anda';
+
+        // Notifikasi Telegram instan ke Pengundang / Sponsor
+        await sendTelegramMessage(user.referrer_id,
+          `🎯 *BONUS MILESTONE LEVEL REFERRAL MASUK!*\n\n` +
+          `Luar biasa! Teman yang Anda undang (*${playerName}*) baru saja menembus *Level ${level}* di Cyber Orbit!\n` +
+          `💰 Bonus Referral Masuk: *+Rp ${milestoneBonus.toLocaleString('id-ID')}*\n\n` +
+          `🔥 Anda mendapatkan bonus setiap kali referral menembus kelipatan 10 level (hingga Level 100)! Terus bagikan link Anda!`
+        );
+      }
+
+      await env.DB.prepare('UPDATE users SET last_milestone_awarded = ? WHERE app_pair_token = ?').bind(level, pairToken).run();
+
+      return jsonResponse({
+        success: true,
+        milestoneAwarded: true,
+        level,
+        milestoneBonus,
+        message: `Milestone Level ${level} berhasil dicatat!`
+      });
+    }
+  }
+
+  return jsonResponse({ success: true, level });
+}
+
+// ============================================================================
 // 3. HANDLER VERIFIKASI LISENSI (/verify)
 // ============================================================================
 async function handleVerifyLicense(request, env, url) {
@@ -575,11 +655,15 @@ async function handleTelegramUpdate(update, env) {
         `Dapatkan penghasilan tanpa batas cukup dengan membagikan link Anda:\n\n` +
         `🔗 *Link Referral Unik Anda:*\n` +
         `\`${refLink}\`\n\n` +
-        `💰 *Struktur Komisi:*\n` +
-        `• *Tier 1 (Jual Langsung):* ${directReward} per lisensi software Rp 99.000\n` +
+        `🎮 *Bonus Progres Level Game Teman (NEW!):*\n` +
+        `• Teman menyelesaikan *Level 10*: Anda dapat *Rp 100*\n` +
+        `• Setiap kelipatan 10 level berikutnya (Level 20 s/d 100): Anda dapat *Rp 50* per kelipatan!\n` +
+        `• Total bonus main game: *Hingga Rp 550 per teman aktif!*\n\n` +
+        `💰 *Komisi Penjualan Software Digital:*\n` +
+        `• *Tier 1 (Jual Langsung):* ${directReward} per lisensi software\n` +
         `• *Tier 2 (Bonus Sponsor Pasif):* ${teamReward} setiap kali teman yang Anda ajak berhasil closing!\n\n` +
         `📢 *Materi Promo Siap Sebar:*\n` +
-        `_"Raih puluhan juta dari otomatisasi multi-screen Reddit & Facebook. Beli lisensi resmi atau hasilkan komisi tanpa modal di: ${refLink}"_`
+        `_"Main game seru Cyber Orbit & otomatisasi bisnis digital! Dapatkan bonus harian atau mulai kemitraan tanpa modal di: ${refLink}"_`
       );
       return;
     }
