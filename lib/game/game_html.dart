@@ -407,7 +407,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <h1 class="title-main">CYBER ORBIT</h1>
         <div class="title-sub">QUANTUM CORE</div>
         <p class="desc-text">
-          Level 1 = 5 Game, Level 2 = 10 Game, dst. Tingkat kesulitan meningkat di tiap level. Tonton iklan di tiap game untuk membuka ronde & level berikutnya!
+          Selesaikan game di setiap level dan tonton video iklan untuk mengklaim reward saldo serta membuka level berikutnya!
         </p>
         <button class="btn-primary" id="btn-start">MULAI GAME</button>
       </div>

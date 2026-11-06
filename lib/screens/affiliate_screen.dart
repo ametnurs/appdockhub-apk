@@ -117,17 +117,10 @@ class AffiliateScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildMilestoneRow(
-                    'Tiap 10 Level Referral',
-                    'Rp 50 / step',
-                    'Diberikan setiap kelipatan 10 level (Lvl 10, 20, 30 ... s/d 2000).',
+                    'Bonus Level Game Teman',
+                    'Rp 50 / 10 Lvl',
+                    'Diberikan setiap teman Anda menaikkan 10 level game (hingga Level 2000).',
                     const Color(0xFF10B981),
-                  ),
-                  const Divider(color: Colors.white12, height: 20),
-                  _buildMilestoneRow(
-                    'Maksimal Level 2000',
-                    'Rp 10.000',
-                    'Total 200 milestone x Rp 50 = Rp 10.000 (10k IDR) per referral!',
-                    const Color(0xFF34D399),
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -142,7 +135,7 @@ class AffiliateScreen extends StatelessWidget {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '🔥 Sangat mudah dipromosikan: Cukup ajak teman bermain game, Anda dapat Rp 10.000 per referral aktif!',
+                            '🔥 Dapatkan komisi pasif terus-menerus setiap kali teman yang Anda undang aktif bermain game!',
                             style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),

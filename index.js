@@ -418,7 +418,7 @@ async function handleGameLevelCleared(request, env) {
           `🎯 *BONUS MILESTONE LEVEL REFERRAL MASUK!*\n\n` +
           `Luar biasa! Teman yang Anda undang (*${playerName}*) baru saja menembus *Level ${level}* di Cyber Orbit!\n` +
           `💰 Bonus Referral Masuk: *+Rp ${milestoneBonus.toLocaleString('id-ID')}*\n\n` +
-          `🔥 Anda mendapatkan Rp 50 setiap referral menembus kelipatan 10 level (hingga Level 2000 / Total Rp 10.000 per referral)! Terus bagikan link Anda!`
+          `🔥 Anda mendapatkan Rp 50 setiap referral menembus kelipatan 10 level (hingga Level 2000)! Terus bagikan link Anda!`
         );
       }
 
@@ -656,8 +656,7 @@ async function handleTelegramUpdate(update, env) {
         `🔗 *Link Referral Unik Anda:*\n` +
         `\`${refLink}\`\n\n` +
         `🎮 *Bonus Progres Level Game Referral (NEW!):*\n` +
-        `• Dapatkan *Rp 50* setiap referral menembus kelipatan 10 level (hingga Level 2000)!\n` +
-        `• Total bonus main game: *Rp 10.000 (10k IDR) per referral aktif!*\n\n` +
+        `• Dapatkan *Rp 50* setiap referral menembus kelipatan 10 level (hingga Level 2000)!\n\n` +
         `💰 *Komisi Penjualan Software Digital:*\n` +
         `• *Tier 1 (Jual Langsung):* ${directReward} per lisensi software\n` +
         `• *Tier 2 (Bonus Sponsor Pasif):* ${teamReward} setiap kali teman yang Anda ajak berhasil closing!\n\n` +
