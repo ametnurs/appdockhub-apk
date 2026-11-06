@@ -5,7 +5,7 @@ import '../controllers/ads_controller.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
-/// Model Provider Offerwall, Smartlink & CPA
+/// Model Misi Internal Game (Menyembunyikan merek AdNetwork agar terlihat bawaan asli game)
 class OfferwallProviderItem {
   final String id;
   final String name;
@@ -37,8 +37,8 @@ class OfferwallProviderItem {
   }
 }
 
-/// Layar In-App WebView untuk menampilkan Offerwall / Script CPA langsung di dalam APK
-/// tanpa membuka browser eksternal.
+/// Layar In-App WebView untuk menampilkan Misi / Quest langsung di dalam APK
+/// tanpa membuka browser eksternal dan tanpa menampilkan nama jaringan iklan.
 class InAppOfferwallViewer extends StatefulWidget {
   final String title;
   final String? url;
@@ -111,9 +111,9 @@ class _InAppOfferwallViewerState extends State<InAppOfferwallViewer> {
               widget.title,
               style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
             ),
-            Text(
-              'ID: ${widget.subId}',
-              style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontFamily: 'monospace'),
+            const Text(
+              'Cyber Orbit Official Quest',
+              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -146,7 +146,7 @@ class _InAppOfferwallViewerState extends State<InAppOfferwallViewer> {
                   CircularProgressIndicator(color: widget.accentColor),
                   const SizedBox(height: 12),
                   const Text(
-                    'Memuat Misi Offerwall...',
+                    'Memuat Misi Quantum Core...',
                     style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -158,9 +158,9 @@ class _InAppOfferwallViewerState extends State<InAppOfferwallViewer> {
   }
 }
 
-/// AdsHubScreen (Offerwall & Smartlink Center):
-/// Menampilkan jaringan yang sudah ACC & Instant Approval langsung di dalam APK (In-App WebView):
-/// CPAGrip (ID 1920856), OGAds, Adsterra, Monetag, Mobidea, CPALead, dan TimeWall.
+/// AdsHubScreen (Pusat Misi & Hadiah Cyber Orbit):
+/// Seluruh nama jaringan iklan (OGAds, CPAGrip, Adsterra, Monetag, Mobidea, dll)
+/// disembunyikan (White-Label) sehingga pemain menganggapnya fitur bawaan asli game.
 class AdsHubScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -171,13 +171,13 @@ class AdsHubScreen extends StatefulWidget {
 }
 
 class _AdsHubScreenState extends State<AdsHubScreen> {
-  // Script HTML Resmi CPAGrip Anda (ID: 1920856) dengan dukungan Tracking SubID otomatis
-  static const String _cpaGripHtmlTemplate = '''<!DOCTYPE html>
+  // Script HTML Internal Server 2 (CPAGrip ID: 1920856) dengan Tracking SubID otomatis
+  static const String _questServer2HtmlTemplate = '''<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CPAGrip Offerwall</title>
+  <title>Cyber Orbit Quest</title>
   <style>
     html, body {
       margin: 0;
@@ -198,77 +198,60 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
 </body>
 </html>''';
 
+  // Daftar Misi Bawaan Game (Nama jaringan iklan di-hide sepenuhnya)
   static const List<OfferwallProviderItem> _offerwallProviders = [
     OfferwallProviderItem(
-      id: 'cpagrip',
-      name: 'CPAGrip Offerwall',
-      badge: '🔥 AKTIF & INSTAN',
-      subtitle: 'Selesaikan misi aplikasi, kuisioner singkat & klaim reward langsung di dalam aplikasi.',
-      rewardRange: 'Rp 500 - Rp 85.000 / Misi',
-      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
-      icon: Icons.card_giftcard_rounded,
-      baseUrl: 'https://playabledownload.com/script_include.php?id=1920856&tracking_id={USER_ID}',
-      embeddedHtml: _cpaGripHtmlTemplate,
-    ),
-    OfferwallProviderItem(
-      id: 'ogads',
-      name: 'OGAds Mobile Offerwall',
-      badge: '🔥 TOP MOBILE CPI',
-      subtitle: 'Install aplikasi Android & selesaikan misi singkat.',
+      id: 'quest_server_1',
+      name: 'Misi Aplikasi & Game (Server 1)',
+      badge: '🔥 REWARD BESAR',
+      subtitle: 'Coba aplikasi & game pilihan di HP Anda untuk klaim hadiah saldo utama.',
       rewardRange: 'Rp 500 - Rp 100.000 / Misi',
       gradientColors: [Color(0xFFFF5E00), Color(0xFFFF9900)],
       icon: Icons.phone_android_rounded,
-      baseUrl: 'https://locked1.com/cl/i/YOUR_OGADS_LOCKER_ID?aff_sub4={USER_ID}',
+      // OGAds Resmi Anda (https://apptrck.net/cl/i/d23g4o) dengan aff_sub4 untuk tracking otomatis
+      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
     ),
     OfferwallProviderItem(
-      id: 'adsterra',
-      name: 'Adsterra Smartlink',
-      badge: '⚡ INSTANT TASK',
-      subtitle: 'Kunjungi halaman sponsor & klaim bonus kunjungan.',
-      rewardRange: 'Rp 100 - Rp 25.000 / Tugas',
+      id: 'quest_server_2',
+      name: 'Misi Kuisioner & Hadiah (Server 2)',
+      badge: '⚡ AKTIF & INSTAN',
+      subtitle: 'Selesaikan kuisioner singkat & tantangan harian langsung di dalam game.',
+      rewardRange: 'Rp 500 - Rp 85.000 / Misi',
+      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
+      icon: Icons.card_giftcard_rounded,
+      // CPAGrip Resmi Anda (ID: 1920856)
+      baseUrl: 'https://playabledownload.com/script_include.php?id=1920856&tracking_id={USER_ID}',
+      embeddedHtml: _questServer2HtmlTemplate,
+    ),
+    OfferwallProviderItem(
+      id: 'quest_daily_visit',
+      name: 'Misi Kunjungan Cepat',
+      badge: '💎 MUDAH',
+      subtitle: 'Buka halaman misi harian selama beberapa detik untuk klaim ekstra poin.',
+      rewardRange: 'Rp 100 - Rp 25.000 / Misi',
       gradientColors: [Color(0xFFE11D48), Color(0xFFFB7185)],
       icon: Icons.ads_click_rounded,
-      baseUrl: 'https://www.highratecpm.com/YOUR_ADSTERRA_SMARTLINK_KEY?subid={USER_ID}',
+      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
     ),
     OfferwallProviderItem(
-      id: 'monetag',
-      name: 'Monetag Direct Task',
-      badge: '💎 CEPAT CAIR',
-      subtitle: 'Buka penawaran sponsor instan & selesaikan aksi mudah.',
-      rewardRange: 'Rp 100 - Rp 30.000 / Tugas',
+      id: 'quest_flash',
+      name: 'Misi Kilat Quantum',
+      badge: '🚀 CEPAT CAIR',
+      subtitle: 'Selesaikan tugas mikro interaktif dan dapatkan tambahan saldo langsung.',
+      rewardRange: 'Rp 100 - Rp 30.000 / Misi',
       gradientColors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
       icon: Icons.flash_on_rounded,
-      baseUrl: 'https://otieu.com/4/YOUR_MONETAG_ZONE_ID?var={USER_ID}',
+      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
     ),
     OfferwallProviderItem(
-      id: 'mobidea',
-      name: 'Mobidea SmartCPA',
-      badge: '🚀 HIGH PAYOUT',
-      subtitle: 'Penawaran aplikasi & konten premium otomatis sesuai operator.',
+      id: 'quest_special',
+      name: 'Misi Spesial Operator',
+      badge: '🎯 BONUS TINGGI',
+      subtitle: 'Tantangan eksklusif sesuai perangkat & jaringan seluler Anda.',
       rewardRange: 'Rp 500 - Rp 120.000 / Misi',
       gradientColors: [Color(0xFF059669), Color(0xFF10B981)],
       icon: Icons.rocket_launch_rounded,
-      baseUrl: 'https://www.mobidea.com/smartlink/?id=YOUR_MOBIDEA_ID&subid={USER_ID}',
-    ),
-    OfferwallProviderItem(
-      id: 'cpalead',
-      name: 'CPALead Offerwall',
-      badge: '✅ AUTO APPROVE',
-      subtitle: 'Survey singkat, unduh aplikasi & penawaran CPA instan.',
-      rewardRange: 'Rp 300 - Rp 75.000 / Misi',
-      gradientColors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-      icon: Icons.bolt_rounded,
-      baseUrl: 'https://www.cpalead.com/mobile/locker/?pub=YOUR_CPALEAD_ID&subid={USER_ID}',
-    ),
-    OfferwallProviderItem(
-      id: 'timewall',
-      name: 'TimeWall Micro-Tasks',
-      badge: '🎯 TUGAS HARIAN',
-      subtitle: 'Klik iklan, lihat situs web & tugas mikro harian.',
-      rewardRange: 'Rp 200 - Rp 50.000 / Tugas',
-      gradientColors: [Color(0xFFD97706), Color(0xFFFBBF24)],
-      icon: Icons.task_alt_rounded,
-      baseUrl: 'https://timewall.io/users/login?oid=YOUR_TIMEWALL_OID&uid={USER_ID}',
+      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
     ),
   ];
 
@@ -289,7 +272,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Langsung membuka Offerwall di dalam aplikasi (In-App WebView) tanpa keluar ke browser
+  /// Membuka Misi langsung di dalam aplikasi (In-App WebView) tanpa keluar ke browser
   void _openOfferwallInApp(OfferwallProviderItem provider) {
     final userId = widget.adsController.pairToken.isNotEmpty
         ? widget.adsController.pairToken
@@ -324,23 +307,23 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. HEADER OFFERWALL & SALDO
+              // 1. HEADER PUSAT MISI & SALDO
               _buildHeader(controller),
               const SizedBox(height: 16),
 
-              // 2. QUICK REWARDED VIDEO ADMOB CARD
+              // 2. VIDEO BONUS HARIAN
               _buildQuickVideoCard(controller),
               const SizedBox(height: 20),
 
-              // 3. JUDUL DAFTAR MITRA OFFERWALL (CPAGRIP, OGADS, ADSTERRA, MONETAG, MOBIDEA, DLL)
+              // 3. JUDUL DAFTAR MISI BAWAAN GAME
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    '🔥 Offerwall & Smartlink Tugas',
+                    '🔥 Daftar Misi & Tantangan Berhadiah',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -351,7 +334,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      'In-App Viewer',
+                      'Resmi',
                       style: TextStyle(
                         color: Color(0xFF10B981),
                         fontSize: 10,
@@ -363,12 +346,12 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Klik salah satu jaringan di bawah untuk membuka daftar misi langsung di dalam aplikasi tanpa keluar ke browser.',
+                'Selesaikan misi resmi Cyber Orbit di bawah ini untuk mengumpulkan hadiah saldo tambahan dengan cepat.',
                 style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.35),
               ),
               const SizedBox(height: 14),
 
-              // 4. LIST KARTU PROVIDER OFFERWALL
+              // 4. LIST KARTU MISI (WHITE-LABEL)
               ..._offerwallProviders.map((p) => _buildOfferwallCard(p)),
 
               const SizedBox(height: 12),
@@ -410,14 +393,14 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 24),
+              child: const Icon(Icons.stars_rounded, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 12),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Offerwall & CPA Hub',
+                  'Pusat Misi & Hadiah',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -425,7 +408,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                   ),
                 ),
                 Text(
-                  'CPAGrip • OGAds • Adsterra • Monetag',
+                  'Cyber Orbit Quantum Quest',
                   style: TextStyle(
                     color: Color(0xFF38BDF8),
                     fontSize: 11,
@@ -492,12 +475,12 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Video Iklan Instan (AdMob)',
+                  'Misi Video Bonus Harian',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 SizedBox(height: 3),
                 Text(
-                  'Tonton video singkat untuk klaim saldo instan.',
+                  'Tonton tayangan singkat untuk klaim hadiah saldo instan.',
                   style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
                 ),
               ],
@@ -519,7 +502,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
                 : const Text(
-                    'Tonton',
+                    'Mulai',
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
                   ),
           ),
@@ -577,7 +560,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                               provider.name,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 15,
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -628,7 +611,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(
-                    'Buka',
+                    'Mulai',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -681,7 +664,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: token));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('SubID / Token Pairing disalin ke clipboard!')),
+                      const SnackBar(content: Text('ID Akun Game disalin ke clipboard!')),
                     );
                   },
                   child: Row(

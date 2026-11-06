@@ -499,10 +499,10 @@ async function handleOfferwallPostback(request, env, url) {
     if (user.telegram_id && !user.telegram_id.startsWith('temp_')) {
       await sendTelegramMessage(
         user.telegram_id,
-        `🎉 *REWARD OFFERWALL (${provider.toUpperCase()}) MASUK!*\n\n` +
-        `📋 Misi: *${offerName}*\n` +
-        `💰 Reward: *+Rp ${rewardIdr.toLocaleString('id-ID')}*\n` +
-        `💵 Total Saldo Iklan & Offerwall: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`
+        `🎉 *HADIAH MISI CYBER ORBIT MASUK!*\n\n` +
+        `📋 Misi Selesai: *${offerName}*\n` +
+        `💰 Reward Saldo: *+Rp ${rewardIdr.toLocaleString('id-ID')}*\n` +
+        `💵 Total Saldo Misi & Game: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`
       );
     }
   }

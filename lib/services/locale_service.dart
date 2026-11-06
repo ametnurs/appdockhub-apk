@@ -17,7 +17,7 @@ class LocaleService {
 
   // Navigasi Bottom Dock
   static String get navGame => 'Cyber Orbit';
-  static String get navOfferwall => 'Offerwall';
+  static String get navOfferwall => isIndonesian ? 'Misi Bonus' : 'Bonus Quests';
   static String get navHwid => isIndonesian ? 'Software HWID' : 'HWID License';
   static String get navAffiliate => isIndonesian ? 'Afiliasi 2-Tier' : '2-Tier Partner';
   static String get navWallet => isIndonesian ? 'Dompet' : 'Wallet';
