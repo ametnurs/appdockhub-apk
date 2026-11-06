@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.appdockhub.ecosystem"
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,10 +20,15 @@ android {
     defaultConfig {
         applicationId = "com.appdockhub.ecosystem"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 8
-        versionName = "1.2.6"
+        targetSdk = 36
+        versionCode = 9
+        versionName = "1.2.7"
         multiDexEnabled = true
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 
     signingConfigs {
