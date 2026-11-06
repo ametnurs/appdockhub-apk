@@ -36,12 +36,13 @@ class AdsController extends ChangeNotifier {
     'https://www.avoidthecroud.help/?sl=6169576-d57f7&pub_click_id={USER_ID}&site=cyber_orbit&pub_sub_id={USER_ID}',
   ];
 
-  static const int maxDailyQuota = 10;
+  static const int maxDailyQuota = 60;
 
   static const String keyPairToken = 'app_pair_token';
   static const String keyWatchedCount = 'ads_watched_today';
   static const String keyLastDate = 'last_ad_watch_date';
   static const String keyBalance = 'local_ads_balance';
+  static const String keyRotationTurn = 'ad_network_rotation_turn';
 
   String _pairToken = '';
   int _adsWatchedToday = 0;
@@ -87,6 +88,7 @@ class AdsController extends ChangeNotifier {
     }
 
     _balanceAds = prefs.getDouble(keyBalance) ?? 0.0;
+    _urlRotationIndex = prefs.getInt(keyRotationTurn) ?? 0;
     _isLimitReached = _adsWatchedToday >= maxDailyQuota;
     notifyListeners();
 
@@ -161,8 +163,18 @@ class AdsController extends ChangeNotifier {
       return false;
     }
 
-    // 1. Jika Real AdMob sudah aktif & ter-load, tayangkan Real AdMob
-    if (_rewardedAd != null) {
+    // ROTASI SELANG-SELING TIAP 1 IKLAN (4 Jaringan Berbeda, Maks 60/Hari = 15 Tayangan/Jaringan):
+    // Turn 0: Google AdMob (Jika sudah ready; jika belum ready langsung lompat ke Turn 1)
+    // Turn 1: Monetag
+    // Turn 2: Adsterra
+    // Turn 3: Mobidea
+    final int currentTurn = _urlRotationIndex % 4;
+
+    // 1. Giliran Turn 0 -> Putar Real AdMob (hanya 1x lalu giliran berikutnya wajib pindah ke Monetag)
+    if (currentTurn == 0 && _rewardedAd != null) {
+      _urlRotationIndex = (_urlRotationIndex + 1) % 4;
+      SharedPreferences.getInstance().then((p) => p.setInt(keyRotationTurn, _urlRotationIndex));
+
       final completer = Completer<bool>();
       bool earnedReward = false;
       bool rewardProcessed = false;
@@ -219,15 +231,22 @@ class AdsController extends ChangeNotifier {
       return result;
     }
 
-    // 2. Jika AdMob belum aktif (belum masuk Play Store), tayangkan Smart Rewarded Ad (Monetag / Adsterra / Mobidea)
+    // 2. Giliran Turn 1 (Monetag), Turn 2 (Adsterra), Turn 3 (Mobidea)
+    //    (Atau jika Turn 0 tapi AdMob belum siap, otomatis bergeser ke Monetag/Adsterra/Mobidea secara bergantian)
     _isLoading = false;
     notifyListeners();
 
     if (!context.mounted) return false;
 
+    final int effectiveTurn = (currentTurn == 0) ? 1 : currentTurn;
+    final int webNetworkIndex = (effectiveTurn - 1) % activeRewardedUrls.length;
+
+    // Majukan jarum rotasi ke jaringan berikutnya untuk iklan selanjutnya
+    _urlRotationIndex = (effectiveTurn + 1) % 4;
+    SharedPreferences.getInstance().then((p) => p.setInt(keyRotationTurn, _urlRotationIndex));
+
     final userId = _pairToken.isNotEmpty ? _pairToken : 'guest_user';
-    final rawUrl = activeRewardedUrls[_urlRotationIndex % activeRewardedUrls.length];
-    _urlRotationIndex++;
+    final rawUrl = activeRewardedUrls[webNetworkIndex];
     final adUrl = rawUrl.replaceAll('{USER_ID}', Uri.encodeComponent(userId));
 
     final bool? completed = await Navigator.of(context).push<bool>(

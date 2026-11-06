@@ -14,7 +14,7 @@ const CONFIG = {
   QRIS_IMAGE_URL: 'https://i.ibb.co.com/RkvpWdTm/qris.jpg',
   TIER1_RATE: 0.30, // 30% Komisi Penjual Langsung
   TIER2_RATE: 0.05, // 5% Komisi Pasif Sponsor Tim
-  MAX_DAILY_ADS: 10, // Batas harian nonton iklan rewarded
+  MAX_DAILY_ADS: 60, // Batas harian nonton iklan rewarded (rotasi 4 jaringan = 15/jaringan)
   AD_REWARD_AMOUNT: 10 // Rp 10 per iklan ditonton
 };
 
@@ -357,7 +357,7 @@ async function handleAdsReward(request, env) {
       adsWatchedToday: CONFIG.MAX_DAILY_ADS,
       remainingQuota: 0,
       currentBalanceAds: user.balance_ads,
-      message: 'Kuota 10 iklan harian Anda telah habis! Beralihlah ke Program Afiliasi 2-Tier untuk komisi tanpa batas kuota.',
+      message: 'Kuota 60 iklan harian Anda telah habis! Beralihlah ke Program Afiliasi 2-Tier untuk komisi tanpa batas kuota.',
       funnelOffer: {
         title: 'Unlimited Earning via Afiliasi 2-Tier',
         directCommission: 'Rp 29.700 per closing (30%)',
@@ -386,7 +386,7 @@ async function handleAdsReward(request, env) {
       `💵 Total Saldo Iklan: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`;
 
     if (isLimitNow) {
-      notifyMsg += `\n\n🔒 *KUOTA HARIAN HABIS (10/10)!*\n` +
+      notifyMsg += `\n\n🔒 *KUOTA HARIAN HABIS (${CONFIG.MAX_DAILY_ADS}/${CONFIG.MAX_DAILY_ADS})!*\n` +
         `Mau dapat Rp 30.000 / closing tanpa batas kuota? Ketik /daftar untuk aktivasi link Afiliasi Anda!`;
     }
 
@@ -401,7 +401,7 @@ async function handleAdsReward(request, env) {
     rewardAdded: rewardToAdd,
     currentBalanceAds: newBalanceAds,
     message: isLimitNow
-      ? 'Selamat! Kuota 10 iklan harian selesai ditonton.'
+      ? `Selamat! Kuota ${CONFIG.MAX_DAILY_ADS} iklan harian selesai ditonton.`
       : `Iklan ke-${watchedToday} sukses. Sisa kuota hari ini: ${remaining} iklan.`
   });
 }

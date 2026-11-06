@@ -40,7 +40,7 @@ class LocaleService {
   static String get gameStartBtn => isIndonesian ? 'MULAI GAME' : 'START GAME';
 
   // Top HUD
-  static String get adsLimitReached => isIndonesian ? '🔒 Kuota 10/10 Habis' : '🔒 Limit 10/10 Reached';
+  static String get adsLimitReached => isIndonesian ? '🔒 Kuota 60/60 Habis' : '🔒 Limit 60/60 Reached';
   static String adsQuota(int watched, int max) => isIndonesian ? '📺 Iklan: $watched/$max' : '📺 Ads: $watched/$max';
 
   // Dompet / Wallet Screen
