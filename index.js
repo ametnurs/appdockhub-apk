@@ -365,7 +365,7 @@ async function handleAdsReward(request, env) {
 }
 
 // ============================================================================
-// 2B. HANDLER MILESTONE REFERRAL GAME (LEVEL 10 = RP 100, TIAP 10 LVL = RP 50)
+// 2B. HANDLER MILESTONE REFERRAL GAME (TIAP 10 LEVEL = RP 50, MAKS LEVEL 2000 = 10K IDR)
 // ============================================================================
 async function handleGameLevelCleared(request, env) {
   let body = {};
@@ -396,12 +396,12 @@ async function handleGameLevelCleared(request, env) {
   const newMax = Math.max(curMax, level);
   await env.DB.prepare('UPDATE users SET max_level = ? WHERE app_pair_token = ?').bind(newMax, pairToken).run();
 
-  // Cek apakah mencapai milestone kelipatan 10 (Level 10, 20, 30, ... maks 100)
-  if (level % 10 === 0 && level <= 100) {
+  // Cek apakah mencapai milestone kelipatan 10 (Level 10, 20, 30, ... maks Level 2000)
+  if (level % 10 === 0 && level <= 2000) {
     const lastAwarded = user.last_milestone_awarded || 0;
     if (lastAwarded < level) {
-      // Aturan: Level 10 dapat Rp 100, selanjutnya tiap 10 level dapat Rp 50
-      const milestoneBonus = (level === 10) ? 100 : 50;
+      // Aturan: Tiap 10 level dapat Rp 50 (Maks Level 2000 = 200 milestone x Rp 50 = Rp 10.000 / 10k IDR per referral)
+      const milestoneBonus = 50;
 
       // Berikan reward ke Sponsor (referrer_id) jika ada
       if (user.referrer_id && user.referrer_id !== user.telegram_id) {
@@ -418,7 +418,7 @@ async function handleGameLevelCleared(request, env) {
           `🎯 *BONUS MILESTONE LEVEL REFERRAL MASUK!*\n\n` +
           `Luar biasa! Teman yang Anda undang (*${playerName}*) baru saja menembus *Level ${level}* di Cyber Orbit!\n` +
           `💰 Bonus Referral Masuk: *+Rp ${milestoneBonus.toLocaleString('id-ID')}*\n\n` +
-          `🔥 Anda mendapatkan bonus setiap kali referral menembus kelipatan 10 level (hingga Level 100)! Terus bagikan link Anda!`
+          `🔥 Anda mendapatkan Rp 50 setiap referral menembus kelipatan 10 level (hingga Level 2000 / Total Rp 10.000 per referral)! Terus bagikan link Anda!`
         );
       }
 
@@ -655,10 +655,9 @@ async function handleTelegramUpdate(update, env) {
         `Dapatkan penghasilan tanpa batas cukup dengan membagikan link Anda:\n\n` +
         `🔗 *Link Referral Unik Anda:*\n` +
         `\`${refLink}\`\n\n` +
-        `🎮 *Bonus Progres Level Game Teman (NEW!):*\n` +
-        `• Teman menyelesaikan *Level 10*: Anda dapat *Rp 100*\n` +
-        `• Setiap kelipatan 10 level berikutnya (Level 20 s/d 100): Anda dapat *Rp 50* per kelipatan!\n` +
-        `• Total bonus main game: *Hingga Rp 550 per teman aktif!*\n\n` +
+        `🎮 *Bonus Progres Level Game Referral (NEW!):*\n` +
+        `• Dapatkan *Rp 50* setiap referral menembus kelipatan 10 level (hingga Level 2000)!\n` +
+        `• Total bonus main game: *Rp 10.000 (10k IDR) per referral aktif!*\n\n` +
         `💰 *Komisi Penjualan Software Digital:*\n` +
         `• *Tier 1 (Jual Langsung):* ${directReward} per lisensi software\n` +
         `• *Tier 2 (Bonus Sponsor Pasif):* ${teamReward} setiap kali teman yang Anda ajak berhasil closing!\n\n` +

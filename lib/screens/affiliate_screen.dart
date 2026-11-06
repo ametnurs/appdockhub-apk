@@ -117,16 +117,16 @@ class AffiliateScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildMilestoneRow(
-                    'Level 10 Referral',
-                    'Rp 100',
-                    'Diberikan saat referral Anda menyelesaikan Level 10 (1 Level = 5 Game).',
+                    'Tiap 10 Level Referral',
+                    'Rp 50 / step',
+                    'Diberikan setiap kelipatan 10 level (Lvl 10, 20, 30 ... s/d 2000).',
                     const Color(0xFF10B981),
                   ),
                   const Divider(color: Colors.white12, height: 20),
                   _buildMilestoneRow(
-                    'Level 20 - 100 (+50/10 Lvl)',
-                    'Rp 50/step',
-                    'Setiap kelipatan 10 level (20, 30, ... 100) dapat Rp 50!',
+                    'Maksimal Level 2000',
+                    'Rp 10.000',
+                    'Total 200 milestone x Rp 50 = Rp 10.000 (10k IDR) per referral!',
                     const Color(0xFF34D399),
                   ),
                   const SizedBox(height: 12),
@@ -138,12 +138,12 @@ class AffiliateScreen extends StatelessWidget {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.info_outline_rounded, color: Color(0xFF10B981), size: 16),
+                        Icon(Icons.stars_rounded, color: Color(0xFF10B981), size: 16),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Total potensi bonus: Rp 550 per pemain aktif referral Anda!',
-                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                            '🔥 Sangat mudah dipromosikan: Cukup ajak teman bermain game, Anda dapat Rp 10.000 per referral aktif!',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

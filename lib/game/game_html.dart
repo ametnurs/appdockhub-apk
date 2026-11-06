@@ -407,7 +407,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <h1 class="title-main">CYBER ORBIT</h1>
         <div class="title-sub">QUANTUM CORE</div>
         <p class="desc-text">
-          Selesaikan 5 game per level untuk menamatkan misi. Klaim reward saldo di setiap game yang berhasil Anda selesaikan (1 Level = 5 Game = 5 Iklan)!
+          Level 1 = 5 Game, Level 2 = 10 Game, dst. Tingkat kesulitan meningkat di tiap level. Tonton iklan di tiap game untuk membuka ronde & level berikutnya!
         </p>
         <button class="btn-primary" id="btn-start">MULAI GAME</button>
       </div>
@@ -573,16 +573,28 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         }
       }
 
+      function getMaxGamesForLevel(level) {
+        // Level 1: 5 game, Level 2: 10 game, Level 3: 15 game, dst (level * 5)
+        return Math.max(5, level * 5);
+      }
+
       function getStageConfig(level, stage) {
-        const totalProgress = (level - 1) * 5 + stage;
-        const obstacles = Math.min(5, Math.floor((totalProgress - 1) / 3));
-        const nodesToShoot = Math.min(10, 4 + Math.floor((totalProgress - 1) / 2));
-        const baseSpeed = Math.min(2.8, 1.35 + (totalProgress - 1) * 0.05);
+        const maxStages = getMaxGamesForLevel(level);
+        // Kesulitan meningkat tajam di tiap level:
+        // 1. Jumlah obstacle awal berputar: Level 1 (1-2), Level 2 (2-3), Level 3 (3-4)...
+        const obstacles = Math.min(6, 1 + Math.floor((level - 1) * 0.7) + Math.floor(stage / 4));
+        // 2. Jumlah pin/node yang harus dimasukkan: bertambah seiring level & stage
+        const nodesToShoot = Math.min(14, 4 + level + Math.floor(stage / 3));
+        // 3. Kecepatan rotasi: semakin cepat di level tinggi
+        const baseSpeed = Math.min(3.6, 1.4 + (level - 1) * 0.18 + (stage - 1) * 0.03);
+        // 4. Arah rotasi: berganti arah di level 2+
+        const direction = (level > 1 && stage % 2 === 0) ? -1 : 1;
+
         return {
           nodesToShoot,
           obstacles,
           baseSpeed,
-          direction: stage % 2 === 0 ? -1 : 1
+          direction
         };
       }
 
@@ -655,6 +667,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         loadStage(lvl, stg) {
           this.level = lvl;
           this.stage = stg;
+          this.maxStages = getMaxGamesForLevel(lvl);
           this.config = getStageConfig(lvl, stg);
           this.orbitAngle = 0;
           this.direction = this.config.direction;
@@ -670,7 +683,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
             });
           }
           if (this.hudLevel) this.hudLevel.textContent = 'LVL ' + String(this.level).padStart(2, '0');
-          if (this.hudStage) this.hudStage.textContent = this.stage + '/5';
+          if (this.hudStage) this.hudStage.textContent = this.stage + '/' + this.maxStages;
           if (this.hudScore) this.hudScore.textContent = this.score.toLocaleString();
 
           // Beritahu Flutter bahwa ronde/stage dimulai
@@ -678,6 +691,11 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
             window.FlutterBridge.postMessage(JSON.stringify({
               event: 'STAGE_START',
               level: this.level,
+              stage: this.stage,
+              maxStages: this.maxStages
+            }));
+          }
+        }
               stage: this.stage
             }));
           }
@@ -792,12 +810,13 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                 this.sound.playCrash();
                 this.setState('GAME_OVER');
                 document.getElementById('gameover-score').textContent = this.score.toLocaleString();
-                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0') + ' (Game ' + this.stage + '/5)';
+                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0') + ' (Game ' + this.stage + '/' + this.maxStages + ')';
                 if (window.FlutterBridge) {
                   window.FlutterBridge.postMessage(JSON.stringify({
                     event: 'GAME_OVER',
                     level: this.level,
                     stage: this.stage,
+                    maxStages: this.maxStages,
                     score: this.score
                   }));
                 }
@@ -823,34 +842,35 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                   const rewardText = (this.localeCfg && this.localeCfg.rewardText) ? this.localeCfg.rewardText : '+Rp 10';
 
                   if (this.stage >= this.maxStages) {
-                    // Level Selesai Penuh (5 dari 5 game selesai!)
+                    // Level Selesai Penuh!
                     this.isLevelComplete = true;
-                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' Selesai (5/5 Game)';
+                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' Selesai (' + this.maxStages + '/' + this.maxStages + ' Game)';
                     if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleClear) ? this.localeCfg.titleClear : 'LEVEL SELESAI!';
-                    if (progressEl) progressEl.textContent = '5/5 Game Selesai';
+                    if (progressEl) progressEl.textContent = this.maxStages + '/' + this.maxStages + ' Game Selesai';
                     if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA LEVEL ' + (this.level + 1) + ' (' + rewardText + ')';
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({
                         event: 'LEVEL_CLEARED',
                         level: this.level,
-                        stage: 5,
+                        stage: this.maxStages,
                         score: this.score
                       }));
                     }
                   } else {
-                    // 1 Game Selesai dari 5
+                    // 1 Game Selesai dari maxStages
                     this.isLevelComplete = false;
-                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' • Game ' + this.stage + '/5 Selesai';
-                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : ('GAME ' + this.stage + '/5 SELESAI!');
-                    if (progressEl) progressEl.textContent = this.stage + ' / 5 Game';
-                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA GAME ' + (this.stage + 1) + '/5 (' + rewardText + ')';
+                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' • Game ' + this.stage + '/' + this.maxStages + ' Selesai';
+                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : ('GAME ' + this.stage + '/' + this.maxStages + ' SELESAI!');
+                    if (progressEl) progressEl.textContent = this.stage + ' / ' + this.maxStages + ' Game';
+                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA GAME ' + (this.stage + 1) + '/' + this.maxStages + ' (' + rewardText + ')';
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({
                         event: 'STAGE_CLEARED',
                         level: this.level,
                         stage: this.stage,
+                        maxStages: this.maxStages,
                         score: this.score
                       }));
                     }

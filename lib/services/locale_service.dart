@@ -46,8 +46,8 @@ class LocaleService {
   static String get gameRewardLabel => isIndonesian ? 'Reward Saldo' : 'Reward Balance';
   static String get gameTotalScore => isIndonesian ? 'Total Skor' : 'Total Score';
   static String get gameStartDesc => isIndonesian
-      ? 'Selesaikan 5 game per level untuk menamatkan misi. Klaim reward saldo di setiap game yang berhasil Anda selesaikan (1 Level = 5 Game = 5 Iklan)!'
-      : 'Complete 5 games per level to clear each sector. Claim rewarded balance after each cleared game (1 Level = 5 Games = 5 Ads)!';
+      ? 'Level 1 = 5 Game, Level 2 = 10 Game, dst. Tingkat kesulitan meningkat di tiap level. Tonton iklan di tiap game untuk membuka ronde & level berikutnya!'
+      : 'Level 1 = 5 Games, Level 2 = 10 Games, and so on. Difficulty scales with each level. Watch ads to unlock each round and level!';
   static String get gameStartBtn => isIndonesian ? 'MULAI GAME' : 'START GAME';
 
   // Top HUD
