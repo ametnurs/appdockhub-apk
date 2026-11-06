@@ -97,9 +97,17 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
           final success = await widget.adsController.watchRewardedAd(context);
           if (success) {
             final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
-            _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
+            if (mounted) {
+              try {
+                await _webViewController.runJavaScript(
+                  "if(window.onRewardSuccess){window.onRewardSuccess('$rewardText');}"
+                );
+              } catch (e) {
+                debugPrint('Error running onRewardSuccess JS: $e');
+              }
+            }
           } else {
-            if (context.mounted) {
+            if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   backgroundColor: Color(0xFFE11D48),

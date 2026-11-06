@@ -156,16 +156,27 @@ class AdsController extends ChangeNotifier {
         debugPrint('🎬 Video Iklan AdMob mulai diputar di layar');
       },
       onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
+        debugPrint('🎬 Video Iklan AdMob ditutup.');
+        try {
+          ad.dispose();
+        } catch (e) {
+          debugPrint('Info dispose ad: $e');
+        }
         _rewardedAd = null;
-        _preloadRewardedAd();
         if (!completer.isCompleted) {
           completer.complete(earnedReward);
         }
+        Future.delayed(const Duration(milliseconds: 800), () {
+          _preloadRewardedAd();
+        });
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         debugPrint('❌ Gagal menayangkan AdMob Rewarded: $error');
-        ad.dispose();
+        try {
+          ad.dispose();
+        } catch (e) {
+          debugPrint('Info dispose fail ad: $e');
+        }
         _rewardedAd = null;
         _preloadRewardedAd(isFallback: true);
         if (!completer.isCompleted) {
@@ -192,60 +203,71 @@ class AdsController extends ChangeNotifier {
     return rewardEarned;
   }
 
-  /// Sinkronisasi Saldo ke Cloudflare Worker
+  /// Sinkronisasi Saldo Lokal & Cloudflare Worker Secara Instan
   Future<void> _syncRewardToBackend(BuildContext context) async {
     final rewardAmt = rewardPerAd;
     final currencyCode = CurrencyService.current.code;
 
+    // 1. Update state lokal secara instan agar UI & Game langsung merespons tanpa jeda
+    _adsWatchedToday += 1;
+    _balanceAds += rewardAmt;
+    _isLimitReached = _adsWatchedToday >= maxDailyQuota;
+
     try {
-      final response = await http.post(
-        Uri.parse('$backendBaseUrl/api/ads/reward'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'pairToken': _pairToken,
-          'rewardAmount': rewardAmt,
-          'currency': currencyCode,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        _adsWatchedToday = data['adsWatchedToday'] ?? (_adsWatchedToday + 1);
-        _balanceAds = (data['currentBalanceAds'] as num?)?.toDouble() ?? (_balanceAds + rewardAmt);
-        _isLimitReached = data['limitReached'] ?? (_adsWatchedToday >= maxDailyQuota);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(keyWatchedCount, _adsWatchedToday);
-        await prefs.setDouble(keyBalance, _balanceAds);
-
-        notifyListeners();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF10B981),
-              content: Text(
-                '🎉 Reward ${CurrencyService.format(rewardAmt)} berhasil masuk! Sisa kuota: $remainingQuota.',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          );
-        }
-
-        if (isLimitReached && context.mounted) {
-          showConversionFunnelDialog(context);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error sync reward: $e');
-      _adsWatchedToday += 1;
-      _balanceAds += rewardAmt;
-      _isLimitReached = _adsWatchedToday >= maxDailyQuota;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(keyWatchedCount, _adsWatchedToday);
       await prefs.setDouble(keyBalance, _balanceAds);
-      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving prefs: $e');
+    }
+
+    notifyListeners();
+
+    if (context.mounted) {
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            content: Text(
+              '🎉 Reward ${CurrencyService.format(rewardAmt)} berhasil masuk! Sisa kuota: $remainingQuota.',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      } catch (_) {}
+    }
+
+    // 2. Sinkronisasi ke Cloudflare Worker di latar belakang (non-blocking)
+    unawaited(_postRewardToServer(rewardAmt, currencyCode));
+  }
+
+  Future<void> _postRewardToServer(double rewardAmt, String currencyCode) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$backendBaseUrl/api/ads/reward'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'pairToken': _pairToken,
+              'rewardAmount': rewardAmt,
+              'currency': currencyCode,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['currentBalanceAds'] != null) {
+          _balanceAds = (data['currentBalanceAds'] as num).toDouble();
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setDouble(keyBalance, _balanceAds);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Info background sync reward: $e');
     }
   }
 

@@ -1024,7 +1024,6 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
 
       // Callback dari Flutter saat Reward berhasil masuk
       window.onRewardSuccess = function(amountText) {
-        alert('🎉 Saldo +' + amountText + ' Berhasil Masuk ke Akun Anda!');
         if (window.gameInstance) {
           window.gameInstance.advanceNext();
         }
