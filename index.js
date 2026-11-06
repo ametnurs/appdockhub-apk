@@ -100,6 +100,25 @@ export default {
       }
 
       // ----------------------------------------------------------------------
+      // ROUTE 1B: GET /app-ads.txt -> VERIFIKASI RESMI GOOGLE ADMOB & AD NETWORKS
+      // ----------------------------------------------------------------------
+      if (url.pathname === '/app-ads.txt' && request.method === 'GET') {
+        const adsTxt = 'google.com, pub-7479911722538350, DIRECT, f08c47fec0942fa0\n';
+        return new Response(adsTxt, {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      }
+
+      // ----------------------------------------------------------------------
+      // ROUTE 1C: GET /privacy & /delete-account -> PRIVACY POLICY GOOGLE PLAY
+      // ----------------------------------------------------------------------
+      if ((url.pathname === '/privacy' || url.pathname === '/privacy-policy' || url.pathname === '/delete-account') && request.method === 'GET') {
+        return new Response(renderPrivacyPolicyHtml(), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      }
+
+      // ----------------------------------------------------------------------
       // ROUTE 2: POST /activate -> VALIDASI & IKAT LISENSI KE HWID (1 DEVICE)
       // ----------------------------------------------------------------------
       if (url.pathname === '/activate' && request.method === 'POST') {
@@ -1347,6 +1366,61 @@ function renderActivationPageHtml(refCode) {
             }
         }
     </script>
+</body>
+</html>`;
+}
+
+// ============================================================================
+// 8. RENDER HALAMAN PRIVACY POLICY & DATA SAFETY (GOOGLE PLAY STORE COMPLIANT)
+// ============================================================================
+function renderPrivacyPolicyHtml() {
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy & Terms of Service - Cyber Orbit (AppDock Hub)</title>
+    <style>
+        body { background: #070B14; color: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; margin: 0; padding: 32px 16px; }
+        .container { max-width: 820px; margin: 0 auto; background: #0F172A; border: 1px solid #1E293B; border-radius: 16px; padding: 28px; }
+        h1 { color: #00F0FF; margin-top: 0; font-size: 24px; }
+        h2 { color: #FF9900; font-size: 18px; margin-top: 24px; border-bottom: 1px solid #1E293B; padding-bottom: 6px; }
+        p, li { color: #CBD5E1; font-size: 14px; }
+        .badge { display: inline-block; background: rgba(16,185,129,0.15); color: #10B981; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <span class="badge">Google Play Store Official Privacy Policy</span>
+        <h1>Privacy Policy & Kebijakan Keamanan - Cyber Orbit</h1>
+        <p><strong>Package Name:</strong> <code>com.appdockhub.ecosystem</code><br>
+        <strong>Developer / Publisher:</strong> AppDock Hub Ecosystem<br>
+        <strong>Effective Date:</strong> November 6, 2026</p>
+
+        <h2>1. Informasi yang Kami Kumpulkan (Data Collection & Usage)</h2>
+        <p>Aplikasi <strong>Cyber Orbit</strong> menghargai privasi pengguna dan mematuhi kebijakan Google Play Developer Program. Kami hanya memproses data teknis minimal untuk menjalankan permainan, menyimpan skor/saldo hadiah, dan mencegah kecurangan (Anti-Fraud):</p>
+        <ul>
+            <li><strong>ID Perangkat / Pair Token Anonim:</strong> Digunakan untuk menyinkronkan progres level permainan dan saldo hadiah pengguna.</li>
+            <li><strong>Alamat IP & Integritas Jaringan:</strong> Diperiksa secara otomatis (real-time) untuk memastikan kepatuhan 1 IP = 1 Perangkat serta mendeteksi koneksi VPN, Proxy, atau Emulator PC demi mencegah <em>Invalid Traffic (IVT)</em>.</li>
+            <li><strong>Advertising ID (Google AdMob & Mitra Iklan):</strong> Digunakan untuk menayangkan iklan banner dan video berhadiah (Rewarded Ads) sesuai kebijakan Google Play Families & Ads Policy.</li>
+        </ul>
+
+        <h2>2. Kebijakan Anti-Fraud & Larangan Keamanan</h2>
+        <ul>
+            <li><strong>Larangan Multi-Akun 1 IP:</strong> Dilarang mengakses permainan menggunakan 2 atau lebih perangkat/akun pada alamat IP publik yang sama secara bersamaan.</li>
+            <li><strong>Larangan VPN & Proxy:</strong> Penggunaan VPN, HTTP/SOCKS Proxy, DNS Tunneler, atau IP Server Hosting akan mengunci akses aplikasi secara otomatis.</li>
+            <li><strong>Larangan Emulator & Virtual Phone:</strong> Aplikasi hanya boleh dijalankan pada perangkat ponsel Android fisik asli (Real Physical Device). Eksekusi di dalam Emulator PC (LDPlayer, BlueStacks, Nox, MEmu), Virtual Phone (VMOS, VPhoneGaGa, X8Sandbox), atau App Cloner (Parallel Space, Dual Space) dilarang keras.</li>
+            <li><strong>Sistem Peringatan 3-Strike:</strong> Pelanggaran keamanan hingga 3 kali akan memblokir akun dan perangkat secara permanen (Permanent Ban).</li>
+        </ul>
+
+        <h2>3. Penyimpanan & Penghapusan Data (Account & Data Deletion)</h2>
+        <p>Kami tidak mengumpulkan nama asli, alamat rumah, daftar kontak, mikrofon, kamera, atau lokasi GPS presisi Anda. Pengguna dapat mengajukan penghapusan seluruh data akun/token kapan saja melalui Bot Dukungan Resmi Telegram kami di <a href="https://t.me/AppDockHub_Bot" style="color:#00F0FF;">@AppDockHub_Bot</a> atau email dukungan resmi di portal <strong>https://appdockhub.com</strong>.</p>
+
+        <h2>4. Hubungi Kami (Contact Us)</h2>
+        <p>Jika Anda memiliki pertanyaan terkait Kebijakan Privasi atau Kepatuhan Keamanan ini, silakan hubungi tim kami melalui:<br>
+        Website Resmi: <a href="https://appdockhub.com" style="color:#00F0FF;">https://appdockhub.com</a><br>
+        Telegram Support: <a href="https://t.me/AppDockHub_Bot" style="color:#00F0FF;">https://t.me/AppDockHub_Bot</a></p>
+    </div>
 </body>
 </html>`;
 }

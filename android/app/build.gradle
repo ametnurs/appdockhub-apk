@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.appdockhub.ecosystem"
-    compileSdk = 34
+    compileSdk = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,16 +20,24 @@ android {
     defaultConfig {
         applicationId = "com.appdockhub.ecosystem"
         minSdk = 21
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.2.0"
         multiDexEnabled = true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("upload-keystore.jks")
+            storePassword "CyberOrbit2026!"
+            keyAlias "upload"
+            keyPassword "CyberOrbit2026!"
+        }
     }
 
     buildTypes {
         release {
-            // Menggunakan debug signing agar APK bisa langsung diinstall tanpa setup keystore rumit
-            signingConfig = signingConfigs.debug
+            signingConfig = file("upload-keystore.jks").exists() ? signingConfigs.release : signingConfigs.debug
             minifyEnabled false
             shrinkResources false
         }
