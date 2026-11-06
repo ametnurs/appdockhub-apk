@@ -1023,12 +1023,41 @@ class _CyberOrbitPainter extends CustomPainter {
       canvas.drawCircle(Offset(cx, p.y), nodeRadius, projPaint);
     }
 
-    // 5. Bottom Launcher Node
+    // 5. Bottom Launcher Node (Besar & Mudah Diklik User)
     if (showLauncher) {
+      final launcherCenter = Offset(cx, launcherY);
+      final glowPaint = Paint()
+        ..color = const Color(0xFFFF9900).withOpacity(0.22)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(launcherCenter, 28.0, glowPaint);
+
+      final ringPaint = Paint()
+        ..color = const Color(0xFFFF9900).withOpacity(0.65)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      canvas.drawCircle(launcherCenter, 20.0, ringPaint);
+
       final launcherPaint = Paint()
         ..color = const Color(0xFFFF9900)
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(cx, launcherY), nodeRadius, launcherPaint);
+      canvas.drawCircle(launcherCenter, 14.0, launcherPaint);
+
+      final tapTextPainter = TextPainter(
+        text: const TextSpan(
+          text: 'TAP UNTUK TEMBAK',
+          style: TextStyle(
+            color: Color(0xFF7DA2BE),
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tapTextPainter.paint(
+        canvas,
+        Offset(cx - tapTextPainter.width / 2, launcherY + 34),
+      );
     }
   }
 

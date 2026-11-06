@@ -19,11 +19,12 @@
     </queries>
 
     <application
-        android:label="Cyber Orbit: Quantum Core"
+        android:label="Cyber Orbit"
         android:name="${applicationName}"
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
-        android:icon="@android:drawable/sym_def_app_icon">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
 
         <!-- Google AdMob Application ID Resmi -->
         <meta-data

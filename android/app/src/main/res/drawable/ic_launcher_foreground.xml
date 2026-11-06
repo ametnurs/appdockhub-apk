@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Neon Cyan Orbit Ring -->
+    <path
+        android:pathData="M54,24 A30,30 0 1,1 53.9,24 Z"
+        android:strokeWidth="3.2"
+        android:strokeColor="#00F0FF"
+        android:fillColor="#00000000" />
+
+    <!-- Inner Glow Ring -->
+    <path
+        android:pathData="M54,31 A23,23 0 1,1 53.9,31 Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#4D00F0FF"
+        android:fillColor="#00000000" />
+
+    <!-- Spoke 1: Top-Right (Cyan Node) -->
+    <path
+        android:pathData="M54,54 L75.2,32.8"
+        android:strokeWidth="2.6"
+        android:strokeColor="#00F0FF" />
+    <path
+        android:pathData="M75.2,26.8 A6,6 0 1,1 75.1,26.8 Z"
+        android:fillColor="#00F0FF" />
+
+    <!-- Spoke 2: Top-Left (Amber Gold Node) -->
+    <path
+        android:pathData="M54,54 L32.8,32.8"
+        android:strokeWidth="2.6"
+        android:strokeColor="#FF9900" />
+    <path
+        android:pathData="M32.8,26.8 A6,6 0 1,1 32.7,26.8 Z"
+        android:fillColor="#FF9900" />
+
+    <!-- Spoke 3: Bottom-Left (Cyan Node) -->
+    <path
+        android:pathData="M54,54 L32.8,75.2"
+        android:strokeWidth="2.6"
+        android:strokeColor="#00F0FF" />
+    <path
+        android:pathData="M32.8,69.2 A6,6 0 1,1 32.7,69.2 Z"
+        android:fillColor="#00F0FF" />
+
+    <!-- Spoke 4: Bottom-Right (Amber Gold Node) -->
+    <path
+        android:pathData="M54,54 L75.2,75.2"
+        android:strokeWidth="2.6"
+        android:strokeColor="#FF9900" />
+    <path
+        android:pathData="M75.2,69.2 A6,6 0 1,1 75.1,69.2 Z"
+        android:fillColor="#FF9900" />
+
+    <!-- Bottom Launcher Energy Projectile -->
+    <path
+        android:pathData="M54,80 A5,5 0 1,1 53.9,80 Z"
+        android:fillColor="#FF5E00" />
+
+    <!-- Quantum Core Center Outer Glow -->
+    <path android:pathData="M54,38 A16,16 0 1,1 53.9,38 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="38"
+                android:startY="38"
+                android:endX="70"
+                android:endY="70"
+                android:startColor="#00F0FF"
+                android:endColor="#0088FF" />
+        </aapt:attr>
+    </path>
+
+    <!-- Quantum Core Dark Inner Circle -->
+    <path
+        android:pathData="M54,41 A13,13 0 1,1 53.9,41 Z"
+        android:fillColor="#071024" />
+
+    <!-- Center Play / Energy Bolt Emblem -->
+    <path
+        android:pathData="M50,46.5 L61.5,54 L50,61.5 Z"
+        android:fillColor="#FF9900" />
+</vector>
