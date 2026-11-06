@@ -43,4 +43,9 @@ class DeepLinkService {
     final String url = 'https://t.me/$botUsername?start=buy_${productKey}_ref_$refCode';
     return await _launchUrl(url);
   }
+
+  /// 4. Buka URL Eksternal (Offerwall Torox, CPALead, TimeWall, AdGate, dll)
+  static Future<bool> openExternalUrl(String url) async {
+    return await _launchUrl(url);
+  }
 }

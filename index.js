@@ -121,6 +121,13 @@ export default {
       }
 
       // ----------------------------------------------------------------------
+      // ROUTE 3C: GET/POST /api/offerwall/postback -> S2S POSTBACK TOROX, CPALEAD, DLL
+      // ----------------------------------------------------------------------
+      if (url.pathname === '/api/offerwall/postback') {
+        return await handleOfferwallPostback(request, env, url);
+      }
+
+      // ----------------------------------------------------------------------
       // ROUTE 4: GET /verify -> CEK STATUS LISENSI HWID OLEH DESKTOP/APK
       // ----------------------------------------------------------------------
       if (url.pathname === '/verify') {
@@ -435,6 +442,69 @@ async function handleGameLevelCleared(request, env) {
   }
 
   return jsonResponse({ success: true, level });
+}
+
+// ============================================================================
+// 2C. HANDLER S2S POSTBACK OFFERWALL (TOROX, CPALEAD, TIMEWALL, ADGATE, LOOTABLY)
+// Endpoint: /api/offerwall/postback?user_id={USER_ID}&amount={AMOUNT}&provider=torox&offer_name={OFFER_NAME}
+// ============================================================================
+async function handleOfferwallPostback(request, env, url) {
+  const params = url.searchParams;
+  // Support parameter standar dari Torox (user_id, amount, oid), CPALead (subid, payout), TimeWall (uid, revenue), AdGate, dll
+  const pairToken = (
+    params.get('user_id') ||
+    params.get('subid') ||
+    params.get('uid') ||
+    params.get('sid') ||
+    params.get('external_identifier') ||
+    ''
+  ).trim();
+
+  const rawAmount = parseFloat(
+    params.get('amount') ||
+    params.get('payout') ||
+    params.get('currency_amount') ||
+    params.get('revenue') ||
+    '0'
+  );
+
+  const provider = (params.get('provider') || 'Offerwall CPA').trim();
+  const offerName = (params.get('offer_name') || params.get('o_name') || 'Misi Offerwall').trim();
+
+  if (!pairToken || rawAmount <= 0) {
+    return new Response('0', { status: 400 });
+  }
+
+  // Jika amount masih dalam USD desimal kecil (misal 0.50 USD dari CPALead), bisa dikonversi atau langsung IDR jika sudah diset mata uang aplikasi di dashboard Offerwall
+  const rewardIdr = rawAmount < 10 ? Math.round(rawAmount * 10000) : Math.round(rawAmount);
+
+  if (env.DB) {
+    let user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
+    if (!user) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const tempTelegramId = `temp_${pairToken.slice(0, 8)}`;
+      await env.DB.prepare(
+        'INSERT INTO users (telegram_id, app_pair_token, balance_direct, balance_team, balance_ads, ads_watched_today, last_ad_watch_date) VALUES (?, ?, 0, 0, 0, 0, ?)'
+      ).bind(tempTelegramId, pairToken, todayStr).run();
+      user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
+    }
+
+    const newBalanceAds = (user.balance_ads || 0) + rewardIdr;
+    await env.DB.prepare('UPDATE users SET balance_ads = ? WHERE app_pair_token = ?').bind(newBalanceAds, pairToken).run();
+
+    if (user.telegram_id && !user.telegram_id.startsWith('temp_')) {
+      await sendTelegramMessage(
+        user.telegram_id,
+        `🎉 *REWARD OFFERWALL (${provider.toUpperCase()}) MASUK!*\n\n` +
+        `📋 Misi: *${offerName}*\n` +
+        `💰 Reward: *+Rp ${rewardIdr.toLocaleString('id-ID')}*\n` +
+        `💵 Total Saldo Iklan & Offerwall: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`
+      );
+    }
+  }
+
+  // Mayoritas jaringan Offerwall (Torox, CPALead, AdGate) mengharapkan HTTP 200 dengan body "1" atau "OK"
+  return new Response('1', { status: 200, headers: { 'Content-Type': 'text/plain' } });
 }
 
 // ============================================================================
