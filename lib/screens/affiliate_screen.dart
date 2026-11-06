@@ -119,7 +119,7 @@ class AffiliateScreen extends StatelessWidget {
                   _buildMilestoneRow(
                     'Level 10 Referral',
                     'Rp 100',
-                    'Diberikan saat referral Anda menyelesaikan Level 10.',
+                    'Diberikan saat referral Anda menyelesaikan Level 10 (1 Level = 5 Game).',
                     const Color(0xFF10B981),
                   ),
                   const Divider(color: Colors.white12, height: 20),

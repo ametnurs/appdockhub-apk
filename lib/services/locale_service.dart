@@ -36,16 +36,19 @@ class LocaleService {
 
   // Game HTML strings
   static String get gameLevelCleared => isIndonesian ? 'LEVEL SELESAI!' : 'LEVEL CLEARED!';
+  static String get gameStageCleared => isIndonesian ? 'GAME SELESAI!' : 'GAME CLEARED!';
   static String get gameClaimBtn => isIndonesian ? '🎁 KLAIM' : '🎁 CLAIM';
   static String get gameWatchVideo => isIndonesian ? '(NONTON VIDEO)' : '(WATCH VIDEO)';
-  static String get gameSkipBtn => isIndonesian ? 'LEWATI KE LEVEL BERIKUTNYA' : 'SKIP TO NEXT SECTOR';
-  static String get gameRetryBtn => isIndonesian ? 'COBA LAGI' : 'RETRY SECTOR';
-  static String get gameRewardLabel => isIndonesian ? 'Reward Saldo' : 'Level Reward';
+  static String get gameSkipBtn => isIndonesian ? 'LEWATI KE GAME BERIKUTNYA' : 'NEXT GAME';
+  static String get gameNextStageBtn => isIndonesian ? 'LANJUT KE GAME BERIKUTNYA' : 'NEXT GAME';
+  static String get gameNextLevelBtn => isIndonesian ? 'LANJUT KE LEVEL BERIKUTNYA' : 'NEXT LEVEL';
+  static String get gameRetryBtn => isIndonesian ? 'COBA LAGI' : 'RETRY GAME';
+  static String get gameRewardLabel => isIndonesian ? 'Reward Saldo' : 'Reward Balance';
   static String get gameTotalScore => isIndonesian ? 'Total Skor' : 'Total Score';
   static String get gameStartDesc => isIndonesian
-      ? 'Ketuk layar untuk mengunci energy node ke orbit. Selesaikan level untuk klaim saldo bonus!'
-      : 'Tap anywhere to inject energy nodes into the rotating orbit. Clear sectors to claim bonus rewards!';
-  static String get gameStartBtn => isIndonesian ? 'MULAI GAME' : 'INITIATE LINK';
+      ? 'Selesaikan 5 game per level untuk menamatkan misi. Klaim reward saldo di setiap game yang berhasil Anda selesaikan (1 Level = 5 Game = 5 Iklan)!'
+      : 'Complete 5 games per level to clear each sector. Claim rewarded balance after each cleared game (1 Level = 5 Games = 5 Ads)!';
+  static String get gameStartBtn => isIndonesian ? 'MULAI GAME' : 'START GAME';
 
   // Top HUD
   static String get adsLimitReached => isIndonesian ? '🔒 Kuota 10/10 Habis' : '🔒 Limit 10/10 Reached';

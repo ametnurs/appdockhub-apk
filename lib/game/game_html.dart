@@ -79,7 +79,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
     .hud-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
     }
 
     .hud-pill {
@@ -88,10 +88,11 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       box-shadow: 0 0 14px rgba(0, 240, 255, 0.12), inset 0 0 10px rgba(0, 240, 255, 0.06);
       backdrop-filter: blur(8px);
       border-radius: 10px;
-      padding: 6px 12px;
+      padding: 5px 8px;
       display: flex;
       flex-direction: column;
-      min-width: 78px;
+      min-width: 62px;
+      text-align: center;
     }
 
     .hud-label {
@@ -374,8 +375,12 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
     <div id="hud">
       <div class="hud-group">
         <div class="hud-pill">
-          <span class="hud-label">Sector</span>
+          <span class="hud-label">Level</span>
           <span class="hud-value amber" id="hud-level">LVL 01</span>
+        </div>
+        <div class="hud-pill">
+          <span class="hud-label">Game</span>
+          <span class="hud-value" id="hud-stage" style="color:#00f0ff;">1/5</span>
         </div>
         <div class="hud-pill">
           <span class="hud-label">Score</span>
@@ -402,17 +407,17 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <h1 class="title-main">CYBER ORBIT</h1>
         <div class="title-sub">QUANTUM CORE</div>
         <p class="desc-text">
-          Ketuk layar untuk mengunci energy node ke orbit. Selesaikan level untuk klaim saldo bonus Rp 300!
+          Selesaikan 5 game per level untuk menamatkan misi. Klaim reward saldo di setiap game yang berhasil Anda selesaikan (1 Level = 5 Game = 5 Iklan)!
         </p>
         <button class="btn-primary" id="btn-start">MULAI GAME</button>
       </div>
     </div>
 
-    <!-- LEVEL CLEARED SCREEN -->
+    <!-- LEVEL / GAME CLEARED SCREEN -->
     <div class="overlay-screen hidden" id="screen-clear">
       <div class="panel victory">
-        <div class="eyebrow" id="clear-sector-label">Sector 01 Synchronized</div>
-        <h2 class="title-main" style="font-size:25px;">LEVEL SELESAI!</h2>
+        <div class="eyebrow" id="clear-sector-label">Game 1/5 Selesai</div>
+        <h2 class="title-main" id="clear-title" style="font-size:24px;">GAME SELESAI!</h2>
 
         <div class="stars-row" id="clear-stars">
           <svg class="star-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
@@ -422,12 +427,12 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
 
         <div class="stats-grid">
           <div class="stat-box">
-            <div class="label">Reward Saldo</div>
+            <div class="label" id="label-reward-saldo">Reward Saldo</div>
             <div class="val amber" id="clear-bonus">+Rp 10</div>
           </div>
           <div class="stat-box">
-            <div class="label">Total Score</div>
-            <div class="val cyan" id="clear-score">1,250</div>
+            <div class="label">Progress Level</div>
+            <div class="val cyan" id="clear-progress">1 / 5 Game</div>
           </div>
         </div>
 
@@ -435,7 +440,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <button class="btn-primary reward-btn" id="btn-claim-reward">
           🎁 KLAIM +RP 10 (NONTON VIDEO)
         </button>
-        <button class="btn-secondary" id="btn-next-level">LEWATI KE LEVEL BERIKUTNYA</button>
+        <button class="btn-secondary" id="btn-next-level">LANJUT KE GAME BERIKUTNYA</button>
       </div>
     </div>
 
@@ -563,15 +568,16 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         }
       }
 
-      function getLevelConfig(level) {
-        const obstacles = Math.min(5, Math.floor(level / 2));
-        const nodesToShoot = Math.min(12, 4 + level);
-        const baseSpeed = Math.min(2.6, 1.35 + level * 0.12);
+      function getStageConfig(level, stage) {
+        const totalProgress = (level - 1) * 5 + stage;
+        const obstacles = Math.min(5, Math.floor((totalProgress - 1) / 3));
+        const nodesToShoot = Math.min(10, 4 + Math.floor((totalProgress - 1) / 2));
+        const baseSpeed = Math.min(2.8, 1.35 + (totalProgress - 1) * 0.05);
         return {
           nodesToShoot,
           obstacles,
           baseSpeed,
-          direction: level % 2 === 0 ? -1 : 1
+          direction: stage % 2 === 0 ? -1 : 1
         };
       }
 
@@ -582,6 +588,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           this.sound = new SoundEngine();
 
           this.hudLevel = document.getElementById('hud-level');
+          this.hudStage = document.getElementById('hud-stage');
           this.hudScore = document.getElementById('hud-score');
           this.screenStart = document.getElementById('screen-start');
           this.screenClear = document.getElementById('screen-clear');
@@ -589,6 +596,8 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
 
           this.state = 'START';
           this.level = 1;
+          this.stage = 1;
+          this.maxStages = 5;
           this.score = 0;
           this.orbitAngle = 0;
           this.direction = 1;
@@ -600,6 +609,8 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           this.particles = [];
           this.shockwaves = [];
           this.lastFrameTime = performance.now();
+          this.localeCfg = {};
+          this.isLevelComplete = false;
 
           this.resize();
           this.bindEvents();
@@ -630,14 +641,16 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         startNewGame() {
           this.sound.init();
           this.level = 1;
+          this.stage = 1;
           this.score = 0;
-          this.loadLevel(1);
+          this.loadStage(1, 1);
           this.setState('PLAYING');
         }
 
-        loadLevel(lvl) {
+        loadStage(lvl, stg) {
           this.level = lvl;
-          this.config = getLevelConfig(lvl);
+          this.stage = stg;
+          this.config = getStageConfig(lvl, stg);
           this.orbitAngle = 0;
           this.direction = this.config.direction;
           this.currentAngularVel = this.config.baseSpeed * this.direction;
@@ -651,12 +664,17 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
               type: 'obstacle'
             });
           }
-          this.hudLevel.textContent = 'LVL ' + String(this.level).padStart(2, '0');
-          this.hudScore.textContent = this.score.toLocaleString();
+          if (this.hudLevel) this.hudLevel.textContent = 'LVL ' + String(this.level).padStart(2, '0');
+          if (this.hudStage) this.hudStage.textContent = this.stage + '/5';
+          if (this.hudScore) this.hudScore.textContent = this.score.toLocaleString();
 
-          // Beritahu Flutter bahwa level dimulai
+          // Beritahu Flutter bahwa ronde/stage dimulai
           if (window.FlutterBridge) {
-            window.FlutterBridge.postMessage(JSON.stringify({ event: 'LEVEL_START', level: this.level }));
+            window.FlutterBridge.postMessage(JSON.stringify({
+              event: 'STAGE_START',
+              level: this.level,
+              stage: this.stage
+            }));
           }
         }
 
@@ -676,15 +694,19 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           });
 
           document.getElementById('btn-start').addEventListener('click', () => this.startNewGame());
-          document.getElementById('btn-next-level').addEventListener('click', () => this.advanceNextLevel());
-          document.getElementById('btn-retry').addEventListener('click', () => this.startNewGame());
+          document.getElementById('btn-next-level').addEventListener('click', () => this.advanceNext());
+          document.getElementById('btn-retry').addEventListener('click', () => {
+            this.loadStage(this.level, this.stage);
+            this.setState('PLAYING');
+          });
 
-          // Bridge: Klaim reward nonton video
+          // Bridge: Klaim reward nonton video (1 game = 1 video iklan)
           document.getElementById('btn-claim-reward').addEventListener('click', () => {
             if (window.FlutterBridge) {
               window.FlutterBridge.postMessage(JSON.stringify({
                 event: 'WATCH_AD',
-                level: this.level
+                level: this.level,
+                stage: this.stage
               }));
             }
           });
@@ -696,9 +718,19 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           });
         }
 
-        advanceNextLevel() {
-          this.loadLevel(this.level + 1);
-          this.setState('PLAYING');
+        advanceNext() {
+          if (this.stage < this.maxStages) {
+            // Lanjut ke game berikutnya di level yang sama (misal 2/5, 3/5, ...)
+            this.stage++;
+            this.loadStage(this.level, this.stage);
+            this.setState('PLAYING');
+          } else {
+            // Level selesai penuh (5 game tamat), lanjut ke level berikutnya!
+            this.level++;
+            this.stage = 1;
+            this.loadStage(this.level, this.stage);
+            this.setState('PLAYING');
+          }
         }
 
         fireNode() {
@@ -756,9 +788,14 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                 this.sound.playCrash();
                 this.setState('GAME_OVER');
                 document.getElementById('gameover-score').textContent = this.score.toLocaleString();
-                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0');
+                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0') + ' (Game ' + this.stage + '/5)';
                 if (window.FlutterBridge) {
-                  window.FlutterBridge.postMessage(JSON.stringify({ event: 'GAME_OVER', level: this.level, score: this.score }));
+                  window.FlutterBridge.postMessage(JSON.stringify({
+                    event: 'GAME_OVER',
+                    level: this.level,
+                    stage: this.stage,
+                    score: this.score
+                  }));
                 }
                 return;
               } else {
@@ -770,18 +807,48 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                 if (this.remainingToShoot === 0 && this.projectiles.length === 0) {
                   this.sound.playLevelClear();
                   this.setState('LEVEL_CLEAR');
-                  document.getElementById('clear-score').textContent = this.score.toLocaleString();
                   const stars = document.querySelectorAll('#clear-stars .star-icon');
                   stars.forEach((s, idx) => {
                     setTimeout(() => s.classList.add('earned'), idx * 150);
                   });
 
-                  if (window.FlutterBridge) {
-                    window.FlutterBridge.postMessage(JSON.stringify({
-                      event: 'LEVEL_CLEARED',
-                      level: this.level,
-                      score: this.score
-                    }));
+                  const sectorLabelEl = document.getElementById('clear-sector-label');
+                  const titleEl = document.getElementById('clear-title');
+                  const progressEl = document.getElementById('clear-progress');
+                  const btnNextEl = document.getElementById('btn-next-level');
+
+                  if (this.stage >= this.maxStages) {
+                    // Level Selesai Penuh (5 dari 5 game selesai!)
+                    this.isLevelComplete = true;
+                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' Selesai (5/5 Game)';
+                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleClear) ? this.localeCfg.titleClear : 'LEVEL SELESAI!';
+                    if (progressEl) progressEl.textContent = '5/5 Game Selesai';
+                    if (btnNextEl) btnNextEl.textContent = (this.localeCfg && this.localeCfg.btnNextLevel) ? this.localeCfg.btnNextLevel : 'LANJUT KE LEVEL BERIKUTNYA';
+
+                    if (window.FlutterBridge) {
+                      window.FlutterBridge.postMessage(JSON.stringify({
+                        event: 'LEVEL_CLEARED',
+                        level: this.level,
+                        stage: 5,
+                        score: this.score
+                      }));
+                    }
+                  } else {
+                    // 1 Game Selesai dari 5
+                    this.isLevelComplete = false;
+                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' • Game ' + this.stage + '/5 Selesai';
+                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : ('GAME ' + this.stage + '/5 SELESAI!');
+                    if (progressEl) progressEl.textContent = this.stage + ' / 5 Game';
+                    if (btnNextEl) btnNextEl.textContent = (this.localeCfg && this.localeCfg.btnNextStage) ? this.localeCfg.btnNextStage : 'LANJUT KE GAME BERIKUTNYA';
+
+                    if (window.FlutterBridge) {
+                      window.FlutterBridge.postMessage(JSON.stringify({
+                        event: 'STAGE_CLEARED',
+                        level: this.level,
+                        stage: this.stage,
+                        score: this.score
+                      }));
+                    }
                   }
                 }
               }
@@ -868,16 +935,19 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       window.onRewardSuccess = function(amountText) {
         alert('🎉 Saldo +' + amountText + ' Berhasil Masuk ke Akun Anda!');
         if (window.gameInstance) {
-          window.gameInstance.advanceNextLevel();
+          window.gameInstance.advanceNext();
         }
       };
 
       // Konfigurasi Bahasa & Mata Uang Dinamis dari Flutter (IDR, USD, EUR, dll)
       window.setGameLocale = function(cfg) {
         if (!cfg) return;
+        if (window.gameInstance) {
+          window.gameInstance.localeCfg = cfg;
+        }
         const bonusEl = document.getElementById('clear-bonus');
         const btnClaimEl = document.getElementById('btn-claim-reward');
-        const titleClearEl = document.querySelector('#screen-clear h2');
+        const titleClearEl = document.getElementById('clear-title');
         const btnSkipEl = document.getElementById('btn-next-level');
         const btnRetryEl = document.getElementById('btn-retry');
         const startDescEl = document.querySelector('#screen-start .desc-text');

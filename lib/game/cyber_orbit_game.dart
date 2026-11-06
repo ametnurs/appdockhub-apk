@@ -68,6 +68,9 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
                 'rewardText': rewardText,
                 'btnClaimText': btnClaimText,
                 'titleClear': LocaleService.gameLevelCleared,
+                'titleStageClear': LocaleService.gameStageCleared,
+                'btnNextStage': LocaleService.gameNextStageBtn,
+                'btnNextLevel': LocaleService.gameNextLevelBtn,
                 'btnSkip': LocaleService.gameSkipBtn,
                 'btnRetry': LocaleService.gameRetryBtn,
                 'startDesc': LocaleService.gameStartDesc,
@@ -95,12 +98,14 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
           final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
           _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
         }
+      } else if (event == 'STAGE_CLEARED') {
+        debugPrint('🎯 Game ${data['stage']}/5 di Level ${data['level']} Selesai! Skor: ${data['score']}');
       } else if (event == 'LEVEL_CLEARED') {
         final level = (data['level'] is int) ? data['level'] as int : int.tryParse('${data['level']}') ?? 1;
-        debugPrint('🎉 Level $level Selesai! Skor: ${data['score']}');
+        debugPrint('🎉 Level $level Selesai Penuh (5/5 Game)! Skor: ${data['score']}');
         _notifyLevelCleared(level);
       } else if (event == 'GAME_OVER') {
-        debugPrint('💥 Game Over di Level ${data['level']}');
+        debugPrint('💥 Game Over di Level ${data['level']} (Game ${data['stage'] ?? 1}/5)');
       }
     } catch (e) {
       debugPrint('Error parsing bridge message: $e');
