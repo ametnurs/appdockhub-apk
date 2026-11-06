@@ -3,6 +3,7 @@ import '../controllers/ads_controller.dart';
 import '../game/cyber_orbit_game.dart';
 import '../services/locale_service.dart';
 import '../widgets/banner_ad_widget.dart';
+import 'ads_hub_screen.dart';
 import 'affiliate_screen.dart';
 import 'wallet_screen.dart';
 
@@ -26,6 +27,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> screens = [
       CyberOrbitGameScreen(adsController: widget.adsController),
+      AdsHubScreen(adsController: widget.adsController),
       AffiliateScreen(pairToken: widget.adsController.pairToken),
       WalletScreen(adsBalance: widget.adsController.balanceAds),
     ];
@@ -63,8 +65,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.gamepad_rounded, LocaleService.navGame),
-                  _buildNavItem(1, Icons.people_alt_rounded, LocaleService.navAffiliate),
-                  _buildNavItem(2, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
+                  _buildNavItem(1, Icons.live_tv_rounded, LocaleService.navOfferwall),
+                  _buildNavItem(2, Icons.people_alt_rounded, LocaleService.navAffiliate),
+                  _buildNavItem(3, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
                 ],
               ),
             ),

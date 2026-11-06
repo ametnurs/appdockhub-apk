@@ -3,11 +3,9 @@ import 'package:flutter/services.dart';
 import '../controllers/ads_controller.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
-import 'activation_screen.dart';
 
-/// AdsHubScreen: Tampilan Utama Berdesain Modern FinTech Glassmorphism
-/// Dilengkapi Ambient Glows, Segmented Progress Bar, Telegram Pairing Chip,
-/// dan Tombol Interaktif 3D Glow CTA.
+/// AdsHubScreen (Offerwall Iklan): Tampilan Utama Berdesain Modern FinTech Glassmorphism
+/// Dilengkapi Ambient Glows, Telegram Pairing Chip, dan Tombol Interaktif 3D Glow CTA.
 class AdsHubScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -170,7 +168,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> with SingleTickerProviderSt
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'AppDock Hub',
+                  'Offerwall Iklan',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -199,34 +197,23 @@ class _AdsHubScreenState extends State<AdsHubScreen> with SingleTickerProviderSt
             ),
           ],
         ),
-        // Tombol Shortcut HWID License
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
+        // Badge Offerwall Aktif
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B).withOpacity(0.7),
             borderRadius: BorderRadius.circular(14),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ActivationScreen(backendBaseUrl: widget.adsController.backendBaseUrl)),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B).withOpacity(0.7),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.play_circle_fill_rounded, color: Color(0xFFFF9E00), size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Video Ads',
+                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.vpn_key_rounded, color: Color(0xFFFF9E00), size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'Aktivasi',
-                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ],
@@ -400,67 +387,6 @@ class _AdsHubScreenState extends State<AdsHubScreen> with SingleTickerProviderSt
           const Text(
             'Tersimpan aman di Cloudflare D1 Backend',
             style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
-          ),
-          const SizedBox(height: 20),
-
-          // Header Kuota Iklan
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Kuota Harian Nonton Video',
-                style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              Text(
-                '${controller.adsWatchedToday} / ${AdsController.maxDailyQuota}',
-                style: TextStyle(
-                  color: controller.isLimitReached ? const Color(0xFFF59E0B) : const Color(0xFFFF5E00),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Segmented Progress Bar (10 Kotak Visual)
-          Row(
-            children: List.generate(AdsController.maxDailyQuota, (index) {
-              final isCompleted = index < controller.adsWatchedToday;
-              return Expanded(
-                child: Container(
-                  height: 10,
-                  margin: EdgeInsets.only(right: index == AdsController.maxDailyQuota - 1 ? 0 : 4),
-                  decoration: BoxDecoration(
-                    color: isCompleted
-                        ? const Color(0xFFFF5E00)
-                        : Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: isCompleted
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFFFF5E00).withOpacity(0.5),
-                              blurRadius: 6,
-                            )
-                          ]
-                        : null,
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 12),
-
-          // Keterangan Status Kuota
-          Text(
-            controller.isLimitReached
-                ? '🔒 Kuota 10 iklan hari ini sudah selesai!'
-                : 'Sisa kuota: ${controller.remainingQuota} video lagi untuk hari ini.',
-            style: TextStyle(
-              color: controller.isLimitReached ? const Color(0xFFF59E0B) : const Color(0xFF94A3B8),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ],
       ),
