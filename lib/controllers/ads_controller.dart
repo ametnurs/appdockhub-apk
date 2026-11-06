@@ -22,6 +22,11 @@ class AdsController extends ChangeNotifier {
 
   AdsController({this.backendBaseUrl = 'https://appdockhub.yourdomain.workers.dev'});
 
+  // Identitas Unik Game Ini (Untuk Opsi A: Dompet Terpisah per Game di Bot Telegram)
+  // Saat rilis game baru tiap minggu, cukup ganti gameId & gameName di sini!
+  static const String gameId = 'cyber_orbit';
+  static const String gameName = 'Cyber Orbit';
+
   // Unit ID Rewarded Resmi Google AdMob Anda
   static const String realRewardedAdUnitId = 'ca-app-pub-7479911722538350/7720417695';
 
@@ -377,6 +382,8 @@ class AdsController extends ChangeNotifier {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'pairToken': _pairToken,
+              'gameId': gameId,
+              'gameName': gameName,
               'rewardAmount': rewardAmt,
               'currency': currencyCode,
             }),

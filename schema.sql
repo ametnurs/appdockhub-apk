@@ -28,6 +28,24 @@ CREATE INDEX IF NOT EXISTS idx_users_referrer ON users(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_users_last_ip ON users(last_ip);
 CREATE INDEX IF NOT EXISTS idx_users_ip_date ON users(last_ip, last_ad_watch_date);
 
+-- 1B. TABEL GAME_WALLETS (Dompet Terpisah per Game - Opsi A Multi-Game Ecosystem)
+-- Mencegah penggabungan saldo antar-game sehingga setiap game wajib mencapai Min. WD Rp 50.000 sendiri-sendiri
+CREATE TABLE IF NOT EXISTS game_wallets (
+    pair_token TEXT NOT NULL,
+    game_id TEXT NOT NULL,               -- e.g. 'cyber_orbit', 'neon_strike', dll
+    game_name TEXT NOT NULL,             -- e.g. 'Cyber Orbit'
+    telegram_id TEXT,                    -- Terhubung otomatis saat user pairing ke Bot
+    balance REAL DEFAULT 0.0,            -- Saldo khusus game ini (tidak digabung dengan game lain)
+    ads_watched_today INTEGER DEFAULT 0, -- Kuota harian khusus game ini (Maks 60)
+    last_ad_watch_date TEXT,             -- Format YYYY-MM-DD
+    last_ip TEXT,                        -- IP Publik terakhir untuk cegah double initial boost lintas game
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (pair_token, game_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_wallets_tg ON game_wallets(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_game_wallets_ip_date ON game_wallets(last_ip, last_ad_watch_date);
+
 -- 2. TABEL LICENSES (Pengelolaan Lisensi Multi-Software Terikat HWID)
 CREATE TABLE IF NOT EXISTS licenses (
     license_key TEXT PRIMARY KEY,

@@ -297,8 +297,33 @@ async function handleLicenseActivation(request, env) {
 }
 
 // ============================================================================
-// 2. HANDLER REWARDED ADS (Limit 10 Iklan / Hari & Reset Otomatis)
 // ============================================================================
+// 2. HANDLER REWARDED ADS (Opsi A: Dompet Terpisah per Game & Proteksi Lintas Game)
+// ============================================================================
+let _isGameWalletsTableReady = false;
+async function ensureGameWalletsTable(db) {
+  if (_isGameWalletsTableReady || !db) return;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS game_wallets (
+        pair_token TEXT NOT NULL,
+        game_id TEXT NOT NULL,
+        game_name TEXT NOT NULL,
+        telegram_id TEXT,
+        balance REAL DEFAULT 0.0,
+        ads_watched_today INTEGER DEFAULT 0,
+        last_ad_watch_date TEXT,
+        last_ip TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (pair_token, game_id)
+      )
+    `).run();
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_game_wallets_tg ON game_wallets(telegram_id)').run();
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_game_wallets_ip_date ON game_wallets(last_ip, last_ad_watch_date)').run();
+    _isGameWalletsTableReady = true;
+  } catch (_) {}
+}
+
 async function handleAdsReward(request, env) {
   let body = {};
   try {
@@ -308,6 +333,8 @@ async function handleAdsReward(request, env) {
   }
 
   const pairToken = (body.pairToken || body.app_pair_token || '').trim();
+  const gameId = (body.gameId || 'cyber_orbit').trim();
+  const gameName = (body.gameName || 'Cyber Orbit').trim();
   const rewardToAdd = body.rewardAmount ? parseFloat(body.rewardAmount) : CONFIG.AD_REWARD_AMOUNT;
 
   if (!pairToken) {
@@ -318,14 +345,20 @@ async function handleAdsReward(request, env) {
     return jsonResponse({ success: false, message: 'Database D1 belum terkonfigurasi' }, 500);
   }
 
-  // Format tanggal lokal YYYY-MM-DD
+  await ensureGameWalletsTable(env.DB);
+
+  // Format tanggal lokal YYYY-MM-DD & IP Publik
   const todayStr = new Date().toISOString().slice(0, 10);
+  const clientIp = (
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+    '0.0.0.0'
+  ).trim();
 
   // Cari user berdasarkan app_pair_token
   let user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
 
   if (!user) {
-    // Buat record user sementara jika belum pairing ke Telegram
     const tempTelegramId = `temp_${pairToken.slice(0, 8)}`;
     await env.DB.prepare(
       'INSERT INTO users (telegram_id, app_pair_token, balance_direct, balance_team, balance_ads, ads_watched_today, last_ad_watch_date) VALUES (?, ?, 0, 0, 0, 0, ?)'
@@ -343,21 +376,35 @@ async function handleAdsReward(request, env) {
     }, 403);
   }
 
-  // Cek apakah tanggal sudah berganti (Auto-Reset Harian)
-  let watchedToday = user.ads_watched_today || 0;
-  if (user.last_ad_watch_date !== todayStr) {
+  // Ambil atau buat dompet khusus untuk game ini (Isolated Wallet per Game - Opsi A)
+  let gw = await env.DB.prepare(
+    'SELECT * FROM game_wallets WHERE pair_token = ? AND game_id = ?'
+  ).bind(pairToken, gameId).first();
+
+  if (!gw) {
+    const initialBal = gameId === 'cyber_orbit' ? (user.balance_ads || 0) : 0;
+    const initialWatched = gameId === 'cyber_orbit' && user.last_ad_watch_date === todayStr ? (user.ads_watched_today || 0) : 0;
+    await env.DB.prepare(
+      'INSERT INTO game_wallets (pair_token, game_id, game_name, telegram_id, balance, ads_watched_today, last_ad_watch_date, last_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(pairToken, gameId, gameName, user.telegram_id, initialBal, initialWatched, todayStr, clientIp).run();
+    gw = await env.DB.prepare('SELECT * FROM game_wallets WHERE pair_token = ? AND game_id = ?').bind(pairToken, gameId).first();
+  }
+
+  // Cek apakah tanggal sudah berganti pada game ini (Auto-Reset Harian)
+  let watchedToday = gw.ads_watched_today || 0;
+  if (gw.last_ad_watch_date !== todayStr) {
     watchedToday = 0;
   }
 
-  // CEK KUOTA LIMIT 10 IKLAN / HARI
+  // CEK KUOTA LIMIT 60 IKLAN / HARI PADA GAME INI
   if (watchedToday >= CONFIG.MAX_DAILY_ADS) {
     return jsonResponse({
       success: false,
       limitReached: true,
       adsWatchedToday: CONFIG.MAX_DAILY_ADS,
       remainingQuota: 0,
-      currentBalanceAds: user.balance_ads,
-      message: 'Kuota 60 iklan harian Anda telah habis! Beralihlah ke Program Afiliasi 2-Tier untuk komisi tanpa batas kuota.',
+      currentBalanceAds: gw.balance || 0,
+      message: `Kuota 60 iklan harian di ${gameName} telah habis! Beralihlah ke Program Afiliasi 2-Tier untuk komisi tanpa batas kuota.`,
       funnelOffer: {
         title: 'Unlimited Earning via Afiliasi 2-Tier',
         directCommission: 'Rp 29.700 per closing (30%)',
@@ -367,26 +414,47 @@ async function handleAdsReward(request, env) {
     });
   }
 
-  // Tambahkan reward dinamis (Iklan 1-5 maks Rp 50, Iklan 6-60 antara Rp 2 - Rp 30, target 60 iklan = Rp 600/hari)
-  watchedToday += 1;
-  const maxAllowedPerAd = watchedToday <= 5 ? 50 : 30;
-  const safeReward = Math.max(2, Math.min(maxAllowedPerAd, Math.round(rewardToAdd)));
-  const newBalanceAds = (user.balance_ads || 0) + safeReward;
+  // PROTEKSI ANTI-BONCOS LINTAS GAME (Anti-Double Initial Boost):
+  // Jika pemain yang sama (IP sama atau Telegram ID sama) sudah bermain di game LAIN hari ini,
+  // maka di game ke-2/ke-3 hari ini tidak lagi mendapat bonus pancingan besar (Rp 50/20/40),
+  // melainkan disesuaikan ke tarif normal (maks Rp 8) karena eCPM HP-nya sudah menurun.
+  let alreadyPlayedOtherGameToday = false;
+  if (watchedToday < 5 && clientIp !== '0.0.0.0') {
+    const otherGame = await env.DB.prepare(
+      'SELECT game_id FROM game_wallets WHERE game_id != ? AND last_ad_watch_date = ? AND ads_watched_today > 0 AND (last_ip = ? OR (telegram_id = ? AND telegram_id NOT LIKE "temp_%")) LIMIT 1'
+    ).bind(gameId, todayStr, clientIp, user.telegram_id || '').first();
+    if (otherGame) {
+      alreadyPlayedOtherGameToday = true;
+    }
+  }
 
+  watchedToday += 1;
+  const maxAllowedPerAd = watchedToday <= 5 ? (alreadyPlayedOtherGameToday ? 8 : 50) : 30;
+  const safeReward = Math.max(2, Math.min(maxAllowedPerAd, Math.round(rewardToAdd)));
+  const newGameBalance = (gw.balance || 0) + safeReward;
+
+  // Update dompet khusus game ini (Isolated Wallet)
   await env.DB.prepare(
-    'UPDATE users SET ads_watched_today = ?, balance_ads = ?, last_ad_watch_date = ? WHERE app_pair_token = ?'
-  ).bind(watchedToday, newBalanceAds, todayStr, pairToken).run();
+    'UPDATE game_wallets SET ads_watched_today = ?, balance = ?, last_ad_watch_date = ?, last_ip = ?, telegram_id = ? WHERE pair_token = ? AND game_id = ?'
+  ).bind(watchedToday, newGameBalance, todayStr, clientIp, user.telegram_id, pairToken, gameId).run();
+
+  // Sinkronkan juga ke kolom legacy jika game utama
+  if (gameId === 'cyber_orbit') {
+    await env.DB.prepare(
+      'UPDATE users SET ads_watched_today = ?, balance_ads = ?, last_ad_watch_date = ? WHERE app_pair_token = ?'
+    ).bind(watchedToday, newGameBalance, todayStr, pairToken).run();
+  }
 
   const isLimitNow = watchedToday >= CONFIG.MAX_DAILY_ADS;
   const remaining = CONFIG.MAX_DAILY_ADS - watchedToday;
 
   // Optimasi Skala Besar: Kirim notifikasi Telegram hanya pada Iklan ke-1, kelipatan 10 (10,20,30,40,50), atau saat kuota 60/60 selesai
-  // agar Bot Telegram tidak terkena Rate Limit (429 Too Many Requests) saat ribuan user menonton iklan bersamaan.
   if (user.telegram_id && !user.telegram_id.startsWith('temp_') && (watchedToday === 1 || watchedToday % 10 === 0 || isLimitNow)) {
-    let notifyMsg = `📺 *UPDATE SALDO GAME CYBER ORBIT!*\n\n` +
+    let notifyMsg = `📺 *UPDATE SALDO ${gameName.toUpperCase()}!*\n\n` +
       `💰 Reward Terakhir: *+Rp ${safeReward.toLocaleString('id-ID')}*\n` +
       `🎯 Progres Hari Ini: *${watchedToday}/${CONFIG.MAX_DAILY_ADS} Iklan*\n` +
-      `💵 Total Saldo Iklan: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`;
+      `💵 Saldo Dompet ${gameName}: *Rp ${newGameBalance.toLocaleString('id-ID')}*\n` +
+      `_(Dompet tiap game terpisah, Min. WD Rp 50.000/game)_`;
 
     if (isLimitNow) {
       notifyMsg += `\n\n🔒 *KUOTA HARIAN HABIS (${CONFIG.MAX_DAILY_ADS}/${CONFIG.MAX_DAILY_ADS})!*\n` +
@@ -398,11 +466,13 @@ async function handleAdsReward(request, env) {
 
   return jsonResponse({
     success: true,
+    gameId,
+    gameName,
     limitReached: isLimitNow,
     adsWatchedToday: watchedToday,
     remainingQuota: remaining,
     rewardAdded: safeReward,
-    currentBalanceAds: newBalanceAds,
+    currentBalanceAds: newGameBalance,
     message: isLimitNow
       ? `Selamat! Kuota ${CONFIG.MAX_DAILY_ADS} iklan harian selesai ditonton.`
       : `Iklan ke-${watchedToday} sukses (+Rp ${safeReward}). Sisa kuota hari ini: ${remaining} iklan.`
@@ -834,6 +904,7 @@ async function handleTelegramUpdate(update, env) {
       if (startParam.startsWith('pair_')) {
         const token = startParam.replace('pair_', '').trim();
         if (env.DB) {
+          await ensureGameWalletsTable(env.DB);
           // Cari user dengan pair token tersebut
           const existing = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(token).first();
           if (existing) {
@@ -844,11 +915,13 @@ async function handleTelegramUpdate(update, env) {
               'INSERT INTO users (telegram_id, app_pair_token) VALUES (?, ?) ON CONFLICT(telegram_id) DO UPDATE SET app_pair_token = ?'
             ).bind(chatId, token, token).run();
           }
+          // Hubungkan dompet game dengan akun Telegram ini (tetap terpisah per game_id)
+          await env.DB.prepare('UPDATE game_wallets SET telegram_id = ? WHERE pair_token = ?').bind(chatId, token).run();
         }
         await sendTelegramMessage(chatId,
           `✅ *PAIRING BERHASIL!*\n\n` +
           `Aplikasi Android (APK) Anda telah terhubung dengan akun Telegram ini.\n` +
-          `Poin nonton iklan rewarded dan notifikasi lisensi Anda akan disinkronkan secara otomatis!`
+          `Dompet masing-masing game dan komisi afiliasi Anda kini tersinkronisasi secara otomatis!`
         );
         return;
       }
@@ -936,60 +1009,106 @@ async function handleTelegramUpdate(update, env) {
       return;
     }
 
-    // 4. MENU: 💳 CEK SALDO (RINCIAN 30%, 5%, ADS, & TOTAL)
+    // 4. MENU: 💳 CEK SALDO (OPSI A: DOMPET TERPISAH PER GAME + KOMISI AFILIASI)
     if (lowerText === '💳 cek saldo' || lowerText === '/saldo' || lowerText === 'saldo') {
-      let bDirect = 0, bTeam = 0, bAds = 0;
+      let bDirect = 0, bTeam = 0, bAdsLegacy = 0;
+      let gameWallets = [];
       if (env.DB) {
-        const u = await env.DB.prepare('SELECT balance_direct, balance_team, balance_ads FROM users WHERE telegram_id = ?').bind(chatId).first();
+        await ensureGameWalletsTable(env.DB);
+        const u = await env.DB.prepare('SELECT balance_direct, balance_team, balance_ads, app_pair_token FROM users WHERE telegram_id = ?').bind(chatId).first();
         if (u) {
           bDirect = u.balance_direct || 0;
           bTeam = u.balance_team || 0;
-          bAds = u.balance_ads || 0;
+          bAdsLegacy = u.balance_ads || 0;
+          const gwRes = await env.DB.prepare(
+            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+          ).bind(chatId, u.app_pair_token || '').all();
+          gameWallets = gwRes?.results || [];
         }
       }
-      const total = bDirect + bTeam + bAds;
+
+      let gamesSection = '';
+      if (gameWallets.length > 0) {
+        for (const g of gameWallets) {
+          const bal = g.balance || 0;
+          const statusWd = bal >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
+          gamesSection += `🎮 *${g.game_name}:* *Rp ${bal.toLocaleString('id-ID')}* _(${statusWd})_\n`;
+        }
+      } else {
+        const statusWd = bAdsLegacy >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
+        gamesSection = `🎮 *Cyber Orbit:* *Rp ${bAdsLegacy.toLocaleString('id-ID')}* _(${statusWd})_\n`;
+      }
+
+      const affiliateTotal = bDirect + bTeam;
 
       await sendTelegramMessage(chatId,
-        `💳 *RINCIAN SALDO DOMPET ANDA*\n\n` +
+        `💳 *RINCIAN DOMPET EKOSISTEM ANDA*\n\n` +
+        `🤝 *DOMPET AFILIASI & REFERRAL:*\n` +
         `🥇 Komisi Langsung (Tier 1 - 30%): *Rp ${bDirect.toLocaleString('id-ID')}*\n` +
-        `🥈 Komisi Tim Sponsor (Tier 2 - 5%): *Rp ${bTeam.toLocaleString('id-ID')}*\n` +
-        `📺 Saldo Nonton Iklan (APK): *Rp ${bAds.toLocaleString('id-ID')}*\n` +
+        `🥈 Komisi Tim & Referral Level: *Rp ${bTeam.toLocaleString('id-ID')}*\n` +
+        `💵 Total Saldo Afiliasi: *Rp ${affiliateTotal.toLocaleString('id-ID')}*\n\n` +
+        `🕹️ *DOMPET MASING-MASING GAME (TERPISAH):*\n` +
+        gamesSection +
         `-----------------------------------------\n` +
-        `💵 *TOTAL SALDO DAPAT DICAIRKAN:* *Rp ${total.toLocaleString('id-ID')}*\n\n` +
-        `Minimal penarikan adalah Rp 50.000. Klik tombol *💸 Tarik Saldo* untuk pencairan ke E-Wallet.`
+        `ℹ️ *Ketentuan Pencairan:*\n` +
+        `Saldo antar-game bersifat terpisah (tidak dapat digabungkan). Setiap dompet game wajib mencapai minimal *Rp 50.000* untuk dapat dicairkan ke E-Wallet.`
       );
       return;
     }
 
-    // 5. MENU: 💸 TARIK SALDO (FORM WITHDRAWAL KE E-WALLET)
+    // 5. MENU: 💸 TARIK SALDO (VALIDASI DOMPET TERPISAH >= RP 50.000 PER GAME)
     if (lowerText === '💸 tarik saldo' || lowerText === '/tarik' || lowerText === 'tarik') {
-      let total = 0;
+      let withdrawableTotal = 0;
+      let eligibleSources = [];
       if (env.DB) {
-        const u = await env.DB.prepare('SELECT balance_direct + balance_team + balance_ads as total FROM users WHERE telegram_id = ?').bind(chatId).first();
-        if (u) total = u.total || 0;
+        await ensureGameWalletsTable(env.DB);
+        const u = await env.DB.prepare('SELECT balance_direct, balance_team, balance_ads, app_pair_token FROM users WHERE telegram_id = ?').bind(chatId).first();
+        if (u) {
+          const affBal = (u.balance_direct || 0) + (u.balance_team || 0);
+          if (affBal >= 50000) {
+            withdrawableTotal += affBal;
+            eligibleSources.push(`Dompet Afiliasi (Rp ${affBal.toLocaleString('id-ID')})`);
+          }
+          const gwRes = await env.DB.prepare(
+            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+          ).bind(chatId, u.app_pair_token || '').all();
+          const gwList = gwRes?.results || [];
+          if (gwList.length > 0) {
+            for (const g of gwList) {
+              if ((g.balance || 0) >= 50000) {
+                withdrawableTotal += g.balance;
+                eligibleSources.push(`${g.game_name} (Rp ${(g.balance || 0).toLocaleString('id-ID')})`);
+              }
+            }
+          } else if ((u.balance_ads || 0) >= 50000) {
+            withdrawableTotal += u.balance_ads;
+            eligibleSources.push(`Cyber Orbit (Rp ${(u.balance_ads || 0).toLocaleString('id-ID')})`);
+          }
+        }
       }
 
-      if (total < 50000) {
+      if (withdrawableTotal < 50000) {
         await sendTelegramMessage(chatId,
-          `⚠️ Saldo Anda saat ini *Rp ${total.toLocaleString('id-ID')}*.\n` +
-          `Batas minimal penarikan adalah *Rp 50.000*.\n\n` +
-          `Ajak teman atau bagikan link afiliasi Anda untuk mempercepat akumulasi saldo!`
+          `⚠️ *BELUM ADA DOMPET YANG MENCAPAI RP 50.000*\n\n` +
+          `Sesuai kebijakan *Dompet Game Terpisah*, saldo dari game yang berbeda tidak dapat digabungkan untuk mencapai batas minimal penarikan.\n\n` +
+          `Pastikan minimal salah satu Dompet Game atau Dompet Afiliasi Anda telah mencapai *Rp 50.000* (Ketik *💳 Cek Saldo* untuk melihat rincian tiap game).`
         );
         return;
       }
 
       await sendTelegramMessage(chatId,
         `💸 *FORM PENCAIRAN SALDO (E-WALLET / BANK)*\n\n` +
-        `Saldo Anda: *Rp ${total.toLocaleString('id-ID')}*\n\n` +
+        `✅ Dompet Siap Cair: *${eligibleSources.join(', ')}*\n` +
+        `💵 Total Dapat Ditarik: *Rp ${withdrawableTotal.toLocaleString('id-ID')}*\n\n` +
         `Silakan balas pesan ini dengan format:\n` +
         `\`tarik <Jumlah> <DANA/GoPay/OVO/BCA> <Nomor Rekening> <Nama Pemilik>\`\n\n` +
         `Contoh:\n` +
-        `\`tarik ${total} DANA 08123456789 Budi Santoso\``
+        `\`tarik ${withdrawableTotal} DANA 08123456789 Budi Santoso\``
       );
       return;
     }
 
-    // 6. PROSES FORM PENARIKAN (TARIK DANA)
+    // 6. PROSES FORM PENARIKAN (HANYA POTONG DOMPET YANG SUDAH >= RP 50.000)
     if (lowerText.startsWith('tarik ') && rawText.split(/\s+/).length >= 5) {
       const words = rawText.split(/\s+/);
       const amount = parseInt(words[1]);
@@ -1003,27 +1122,58 @@ async function handleTelegramUpdate(update, env) {
       }
 
       if (env.DB) {
+        await ensureGameWalletsTable(env.DB);
         const u = await env.DB.prepare('SELECT * FROM users WHERE telegram_id = ?').bind(chatId).first();
-        const curTotal = (u.balance_direct || 0) + (u.balance_team || 0) + (u.balance_ads || 0);
-
-        if (curTotal < amount) {
-          await sendTelegramMessage(chatId, `⚠️ Saldo tidak mencukupi! Total saldo Anda: Rp ${curTotal.toLocaleString('id-ID')}`);
+        if (!u) {
+          await sendTelegramMessage(chatId, '⚠️ Akun belum terdaftar.');
           return;
         }
 
-        // Potong saldo secara berurutan: balance_direct -> balance_team -> balance_ads
+        const affBal = (u.balance_direct || 0) + (u.balance_team || 0);
+        const gwRes = await env.DB.prepare(
+          'SELECT pair_token, game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+        ).bind(chatId, u.app_pair_token || '').all();
+        const gwList = gwRes?.results || [];
+
+        let eligibleTotal = affBal >= 50000 ? affBal : 0;
+        for (const g of gwList) {
+          if ((g.balance || 0) >= 50000) eligibleTotal += g.balance;
+        }
+
+        if (eligibleTotal < amount) {
+          await sendTelegramMessage(
+            chatId,
+            `⚠️ Saldo dompet yang memenuhi syarat (>= Rp 50.000 per game) tidak mencukupi! Saldo siap cair: Rp ${eligibleTotal.toLocaleString('id-ID')}`
+          );
+          return;
+        }
+
         let rem = amount;
-        let d = u.balance_direct || 0;
-        let t = u.balance_team || 0;
-        let a = u.balance_ads || 0;
+        // 1. Potong dari dompet afiliasi jika >= 50.000
+        if (affBal >= 50000 && rem > 0) {
+          let d = u.balance_direct || 0;
+          let t = u.balance_team || 0;
+          const cutD = Math.min(d, rem); rem -= cutD; d -= cutD;
+          const cutT = Math.min(t, rem); rem -= cutT; t -= cutT;
+          await env.DB.prepare('UPDATE users SET balance_direct = ?, balance_team = ? WHERE telegram_id = ?').bind(d, t, chatId).run();
+        }
 
-        const cutD = Math.min(d, rem); rem -= cutD; d -= cutD;
-        const cutT = Math.min(t, rem); rem -= cutT; t -= cutT;
-        const cutA = Math.min(a, rem); rem -= cutA; a -= cutA;
-
-        await env.DB.prepare(
-          'UPDATE users SET balance_direct = ?, balance_team = ?, balance_ads = ? WHERE telegram_id = ?'
-        ).bind(d, t, a, chatId).run();
+        // 2. Potong dari masing-masing game_wallets yang sudah >= 50.000
+        for (const g of gwList) {
+          if (rem <= 0) break;
+          let gb = g.balance || 0;
+          if (gb >= 50000) {
+            const cutG = Math.min(gb, rem);
+            rem -= cutG;
+            gb -= cutG;
+            await env.DB.prepare(
+              'UPDATE game_wallets SET balance = ? WHERE pair_token = ? AND game_id = ?'
+            ).bind(gb, g.pair_token, g.game_id).run();
+            if (g.game_id === 'cyber_orbit') {
+              await env.DB.prepare('UPDATE users SET balance_ads = ? WHERE telegram_id = ?').bind(gb, chatId).run();
+            }
+          }
+        }
       }
 
       // Notifikasi ke Admin untuk Transfer

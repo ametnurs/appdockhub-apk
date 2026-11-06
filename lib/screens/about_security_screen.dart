@@ -241,6 +241,17 @@ class AboutSecurityScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
+            _buildPolicyCard(
+              icon: Icons.account_balance_wallet_rounded,
+              iconColor: accentCyan,
+              title: '5. Kebijakan Dompet Game Terpisah (Isolated Game Wallet)',
+              badge: 'Multi-Game Policy',
+              description:
+                  'Setiap aplikasi game di dalam ekosistem AppDock Hub memiliki pencatatan dompet saldo yang berdiri sendiri (terpisah per game).\n\n'
+                  '• Ketentuan Pencairan: Saldo yang diperoleh dari satu game tidak dapat digabungkan dengan saldo dari game lain. Setiap dompet game wajib mencapai batas minimal penarikan (Rp 50.000) secara mandiri untuk dapat dicairkan melalui Bot Resmi.',
+            ),
+            const SizedBox(height: 12),
+
             // 4. MEKANISME 3X PERINGATAN (3-STRIKE ENFORCEMENT)
             Container(
               padding: const EdgeInsets.all(18),
