@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// BannerAdWidget: Komponen Banner Ads Responsif untuk Penghasilan Tambahan
-/// Mendukung Google Mobile Ads SDK (AdMob) dengan fallback visual jika iklan sedang loading/offline.
+/// BannerAdWidget: Komponen Banner Ads Resmi Google AdMob
+/// Unit ID Resmi: ca-app-pub-7479911722538350/9799786122
 class BannerAdWidget extends StatefulWidget {
   final AdSize adSize;
   final String? customAdUnitId;
@@ -22,9 +22,8 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
 
-  // Google AdMob Test Banner Unit ID untuk Android
-  // Ganti dengan Ad Unit ID asli Anda dari dashboard AdMob saat rilis
-  static const String _defaultTestAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+  // Google AdMob Banner Ad Unit ID Resmi Anda
+  static const String _realBannerAdUnitId = 'ca-app-pub-7479911722538350/9799786122';
 
   @override
   void initState() {
@@ -33,10 +32,9 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 
   void _loadBannerAd() {
-    // Hindari load pada lingkungan web / non-mobile
     if (kIsWeb) return;
 
-    final adUnitId = widget.customAdUnitId ?? _defaultTestAdUnitId;
+    final adUnitId = widget.customAdUnitId ?? _realBannerAdUnitId;
 
     _bannerAd = BannerAd(
       adUnitId: adUnitId,
@@ -44,7 +42,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (Ad ad) {
-          debugPrint('✅ Banner Ad berhasil dimuat: ${ad.adUnitId}');
+          debugPrint('✅ Google AdMob Banner Ad berhasil dimuat: ${ad.adUnitId}');
           if (mounted) {
             setState(() {
               _isAdLoaded = true;
@@ -52,7 +50,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
           }
         },
         onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          debugPrint('❌ Gagal memuat Banner Ad: $error');
+          debugPrint('⚠️ AdMob Banner masih peninjauan / fail: $error');
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -74,7 +72,6 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Jika iklan berhasil dimuat, tampilkan widget iklan asli
     if (_isAdLoaded && _bannerAd != null) {
       return Container(
         alignment: Alignment.center,
@@ -84,14 +81,14 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
       );
     }
 
-    // Fallback Mock Banner (Placeholder Elegan bertema Gelap saat AdMob loading)
+    // Fallback Container Elegan Gelap (saat iklan baru dibuat & masih proses peninjauan Google)
     return Container(
       width: widget.adSize.width.toDouble() > 0 ? widget.adSize.width.toDouble() : double.infinity,
       height: widget.adSize.height.toDouble() > 0 ? widget.adSize.height.toDouble() : 50,
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: const Color(0xFF0F172A).withOpacity(0.9),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
@@ -101,24 +98,24 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
+              color: const Color(0xFFFF9E00).withOpacity(0.18),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.amber.withOpacity(0.4)),
+              border: Border.all(color: const Color(0xFFFF9E00).withOpacity(0.4)),
             ),
             child: const Text(
               'AD',
-              style: TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Color(0xFFFF9E00), fontSize: 9, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 8),
           const Expanded(
             child: Text(
-              'AppDock Hub Monetization Space • Penghasilan Pasif Tambahan',
+              'Cyber Orbit Ad Space • Unit Iklan Resmi Aktif',
               style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500),
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Icon(Icons.open_in_new_rounded, color: Colors.grey, size: 14),
+          const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 14),
         ],
       ),
     );

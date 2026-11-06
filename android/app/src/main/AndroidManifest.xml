@@ -19,14 +19,14 @@
     </queries>
 
     <application
-        android:label="AppDock Hub"
+        android:label="Cyber Orbit: Quantum Core"
         android:name="${applicationName}"
         android:icon="@android:drawable/sym_def_app_icon">
 
-        <!-- Google AdMob Application ID -->
+        <!-- Google AdMob Application ID Resmi -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-7479911722538350~9087525598" />
 
         <activity
             android:name=".MainActivity"

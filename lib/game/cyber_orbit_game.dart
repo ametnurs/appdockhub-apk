@@ -77,7 +77,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
         } else {
           await widget.adsController.watchRewardedAd(context);
           // Beritahu game HTML bahwa reward berhasil masuk
-          _webViewController.runJavaScript('window.onRewardSuccess(300);');
+          _webViewController.runJavaScript('window.onRewardSuccess(10);');
         }
       } else if (event == 'LEVEL_CLEARED') {
         debugPrint('🎉 Level ${data['level']} Selesai! Skor: ${data['score']}');

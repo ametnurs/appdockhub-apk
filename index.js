@@ -15,7 +15,7 @@ const CONFIG = {
   TIER1_RATE: 0.30, // 30% Komisi Penjual Langsung
   TIER2_RATE: 0.05, // 5% Komisi Pasif Sponsor Tim
   MAX_DAILY_ADS: 10, // Batas harian nonton iklan rewarded
-  AD_REWARD_AMOUNT: 300 // Rp 300 per iklan ditonton
+  AD_REWARD_AMOUNT: 10 // Rp 10 per iklan ditonton
 };
 
 // Daftar Katalog Software Digital Resmi AppDock Hub

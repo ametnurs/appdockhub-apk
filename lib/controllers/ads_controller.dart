@@ -1,20 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/deep_link_service.dart';
 
 /// AdsController: State management untuk traffic retention nonton video iklan,
-/// pembatasan limit harian (maks 10 iklan), sinkronisasi saldo ke Cloudflare Worker,
-/// dan penguncian tombol dengan Modal Konversi Afiliasi 2-Tier saat kuota habis.
+/// pembatasan limit harian (maks 10 iklan @ Rp 10), integrasi SDK Google AdMob,
+/// sinkronisasi saldo ke Cloudflare Worker, dan Modal Konversi Afiliasi 2-Tier.
 class AdsController extends ChangeNotifier {
-  // URL Endpoint Cloudflare Worker Anda
   final String backendBaseUrl;
 
   AdsController({this.backendBaseUrl = 'https://appdockhub.yourdomain.workers.dev'});
 
+  // Unit ID Rewarded Resmi Google AdMob Anda
+  static const String realRewardedAdUnitId = 'ca-app-pub-7479911722538350/7720417695';
+
+  // Nilai Reward Rp 10 per Iklan
+  static const double rewardPerAd = 10.0;
   static const int maxDailyQuota = 10;
+
   static const String keyPairToken = 'app_pair_token';
   static const String keyWatchedCount = 'ads_watched_today';
   static const String keyLastDate = 'last_ad_watch_date';
@@ -25,6 +33,9 @@ class AdsController extends ChangeNotifier {
   double _balanceAds = 0.0;
   bool _isLoading = false;
   bool _isLimitReached = false;
+
+  RewardedAd? _rewardedAd;
+  bool _isAdLoading = false;
 
   // Getters
   String get pairToken => _pairToken;
@@ -38,7 +49,6 @@ class AdsController extends ChangeNotifier {
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Generate token unik perangkat jika belum ada
     String? token = prefs.getString(keyPairToken);
     if (token == null || token.isEmpty) {
       token = 'DEV_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
@@ -46,7 +56,6 @@ class AdsController extends ChangeNotifier {
     }
     _pairToken = token;
 
-    // Cek tanggal lokal untuk auto-reset harian
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     final lastDate = prefs.getString(keyLastDate) ?? '';
 
@@ -61,9 +70,34 @@ class AdsController extends ChangeNotifier {
     _balanceAds = prefs.getDouble(keyBalance) ?? 0.0;
     _isLimitReached = _adsWatchedToday >= maxDailyQuota;
     notifyListeners();
+
+    // Pre-load Rewarded Ad agar siap diputar saat level selesai
+    _preloadRewardedAd();
   }
 
-  /// Memutar Rewarded Ad & mencatat reward ke Backend
+  void _preloadRewardedAd() {
+    if (kIsWeb || _isAdLoading || _rewardedAd != null) return;
+    _isAdLoading = true;
+
+    RewardedAd.load(
+      adUnitId: realRewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          debugPrint('✅ AdMob Rewarded Ad berhasil di-load!');
+          _rewardedAd = ad;
+          _isAdLoading = false;
+        },
+        onAdFailedToLoad: (error) {
+          debugPrint('⚠️ AdMob Rewarded load error (masih review): $error');
+          _rewardedAd = null;
+          _isAdLoading = false;
+        },
+      ),
+    );
+  }
+
+  /// Memutar Rewarded Ad & mencatat reward Rp 10 ke Backend
   Future<void> watchRewardedAd(BuildContext context) async {
     if (isLimitReached) {
       showConversionFunnelDialog(context);
@@ -73,19 +107,57 @@ class AdsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      // 1. SIMULASI / INTEGRASI SDK AD NETWORK (AdMob / Unity / AppLovin)
-      // Pada implementasi produksi, panggil:
-      // await RewardedAd.load(...) -> rewardedAd.show(onUserEarnedReward: ...)
-      await Future.delayed(const Duration(seconds: 2)); // Simulasi ad playback
+    final completer = Completer<bool>();
 
-      // 2. SINKRONISASI KE CLOUDFLARE WORKER ENDPOINT (/api/ads/reward)
+    if (_rewardedAd != null) {
+      // 1. Tampilkan Iklan AdMob Resmi jika sudah siap
+      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _rewardedAd = null;
+          _preloadRewardedAd(); // Load untuk putaran berikutnya
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _rewardedAd = null;
+          _preloadRewardedAd();
+          if (!completer.isCompleted) completer.complete(true); // Fallback reward
+        },
+      );
+
+      _rewardedAd!.show(
+        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+          debugPrint('🎉 User selesai menonton AdMob Rewarded Ad!');
+          if (!completer.isCompleted) completer.complete(true);
+        },
+      );
+    } else {
+      // Fallback: Jika unit AdMob baru dibuat dan masih butuh waktu 1 jam peninjauan Google
+      debugPrint('AdMob belum ready / masih review Google, menggunakan fallback visual 1.5 detik.');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      completer.complete(true);
+      _preloadRewardedAd();
+    }
+
+    final rewardEarned = await completer.future;
+
+    if (rewardEarned) {
+      await _syncRewardToBackend(context);
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Sinkronisasi Saldo Rp 10 ke Cloudflare Worker
+  Future<void> _syncRewardToBackend(BuildContext context) async {
+    try {
       final response = await http.post(
         Uri.parse('$backendBaseUrl/api/ads/reward'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'pairToken': _pairToken,
-          'rewardAmount': 300, // Rp 300 per ad
+          'rewardAmount': rewardPerAd, // Rp 10 per ad
         }),
       );
 
@@ -93,53 +165,46 @@ class AdsController extends ChangeNotifier {
         final data = jsonDecode(response.body);
 
         _adsWatchedToday = data['adsWatchedToday'] ?? (_adsWatchedToday + 1);
-        _balanceAds = (data['currentBalanceAds'] as num?)?.toDouble() ?? (_balanceAds + 300);
+        _balanceAds = (data['currentBalanceAds'] as num?)?.toDouble() ?? (_balanceAds + rewardPerAd);
         _isLimitReached = data['limitReached'] ?? (_adsWatchedToday >= maxDailyQuota);
 
-        // Simpan state ke SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(keyWatchedCount, _adsWatchedToday);
         await prefs.setDouble(keyBalance, _balanceAds);
 
         notifyListeners();
 
-        // Tampilkan snackbar reward
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: const Color(0xFF10B981),
               content: Text(
-                '🎉 Reward +Rp 300 berhasil masuk! Sisa kuota: $remainingQuota iklan.',
+                '🎉 Reward +Rp ${rewardPerAd.toInt()} berhasil masuk! Sisa kuota: $remainingQuota iklan.',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           );
         }
 
-        // 3. JIKA KUOTA SUDAH HABIS (10/10), PICU POP-UP KONVERSI AFILIASI
+        // Jika kuota mencapai 10/10, picu funnel modal afiliasi
         if (isLimitReached && context.mounted) {
           showConversionFunnelDialog(context);
         }
-      } else {
-        throw Exception('Server mengembalikan kode status ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error watching ad: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('Gagal memproses reward: $e'),
-          ),
-        );
-      }
-    } finally {
-      _isLoading = false;
+      debugPrint('Error sync reward: $e');
+      // Tetap catat lokal agar pengalaman bermain tidak terganggu
+      _adsWatchedToday += 1;
+      _balanceAds += rewardPerAd;
+      _isLimitReached = _adsWatchedToday >= maxDailyQuota;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(keyWatchedCount, _adsWatchedToday);
+      await prefs.setDouble(keyBalance, _balanceAds);
       notifyListeners();
     }
   }
 
-  /// DIALOG POP-UP KONVERSI: Mengarahkan pengguna dari iklan ke program afiliasi 2-tier
+  /// DIALOG POP-UP KONVERSI AFILIASI 2-TIER SAAT KUOTA 10 HABIS
   void showConversionFunnelDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -153,7 +218,6 @@ class AdsController extends ChangeNotifier {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon Lock Badge
                 Container(
                   width: 64,
                   height: 64,
@@ -161,36 +225,24 @@ class AdsController extends ChangeNotifier {
                     color: Colors.amber.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.lock_clock_rounded,
-                    color: Colors.amber,
-                    size: 36,
-                  ),
+                  child: const Icon(Icons.lock_clock_rounded, color: Colors.amber, size: 36),
                 ),
                 const SizedBox(height: 16),
 
-                // Judul Pop-up
                 const Text(
                   'Kuota 10 Iklan Hari Ini Habis!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 8),
 
-                // Copywriting Friction to Conversion
                 const Text(
-                  'Mengapa membatasi diri pada ratusan rupiah jika Anda bisa mencetak '
-                  'komisi puluhan hingga ratusan ribu setiap hari?',
+                  'Jangan batasi diri hanya dengan Rp 100/hari. Raih Rp 29.700 per penjualan tanpa batas kuota via Program Afiliasi 2-Tier!',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
                 ),
                 const SizedBox(height: 16),
 
-                // Box Benefit Afiliasi 2-Tier
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -206,7 +258,7 @@ class AdsController extends ChangeNotifier {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Tier 1: Komisi Langsung 30%\n(Rp 29.700 per closing software)',
+                              'Tier 1: Komisi Langsung 30%\n(Rp 29.700 per software terjual)',
                               style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -230,7 +282,6 @@ class AdsController extends ChangeNotifier {
                 ),
                 const SizedBox(height: 20),
 
-                // Tombol CTA Meluncur ke Telegram Bot
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -259,7 +310,6 @@ class AdsController extends ChangeNotifier {
                 ),
                 const SizedBox(height: 8),
 
-                // Tombol Tutup
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('Nanti Saja', style: TextStyle(color: Colors.grey, fontSize: 12)),

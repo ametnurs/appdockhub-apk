@@ -423,7 +423,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <div class="stats-grid">
           <div class="stat-box">
             <div class="label">Reward Saldo</div>
-            <div class="val amber" id="clear-bonus">+Rp 300</div>
+            <div class="val amber" id="clear-bonus">+Rp 10</div>
           </div>
           <div class="stat-box">
             <div class="label">Total Score</div>
@@ -433,7 +433,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
 
         <!-- Tombol Klaim Reward Ad (Terhubung ke Flutter) -->
         <button class="btn-primary reward-btn" id="btn-claim-reward">
-          🎁 KLAIM +RP 300 (NONTON VIDEO)
+          🎁 KLAIM +RP 10 (NONTON VIDEO)
         </button>
         <button class="btn-secondary" id="btn-next-level">LEWATI KE LEVEL BERIKUTNYA</button>
       </div>

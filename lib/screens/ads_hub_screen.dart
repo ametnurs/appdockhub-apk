@@ -378,7 +378,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> with SingleTickerProviderSt
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  '+Rp 300 / Iklan',
+                  '+Rp 10 / Iklan',
                   style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -523,7 +523,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> with SingleTickerProviderSt
                       Text(
                         controller.isLimitReached
                             ? 'Buka Cuan Afiliasi 30% ➔'
-                            : 'Tonton Video Rewarded (+Rp 300)',
+                            : 'Tonton Video Rewarded (+Rp 10)',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
