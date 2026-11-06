@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../controllers/ads_controller.dart';
+import '../screens/about_security_screen.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/locale_service.dart';
@@ -632,6 +633,19 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: _openAboutSecurityScreen,
+              icon: const Icon(Icons.shield_outlined, color: Color(0xFF7DA2BE), size: 15),
+              label: const Text(
+                'Pengaturan & Kebijakan Keamanan',
+                style: TextStyle(
+                  color: Color(0xFF7DA2BE),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -918,21 +932,47 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
             ),
           ),
 
-          // Shortcut Pairing Telegram
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => DeepLinkService.openBotPairing(controller.pairToken),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0284C7).withOpacity(0.18),
+          // Shortcut Pairing Telegram & Pengaturan/About
+          Row(
+            children: [
+              InkWell(
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF0284C7).withOpacity(0.4)),
+                onTap: () => DeepLinkService.openBotPairing(controller.pairToken),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF0284C7).withOpacity(0.4)),
+                  ),
+                  child: const Icon(Icons.telegram, color: Color(0xFF38BDF8), size: 18),
+                ),
               ),
-              child: const Icon(Icons.telegram, color: Color(0xFF38BDF8), size: 18),
-            ),
+              const SizedBox(width: 8),
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: _openAboutSecurityScreen,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  ),
+                  child: const Icon(Icons.settings_outlined, color: Colors.white70, size: 18),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _openAboutSecurityScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AboutSecurityScreen(pairToken: widget.adsController.pairToken),
       ),
     );
   }

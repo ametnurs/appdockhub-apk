@@ -3,13 +3,27 @@ import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/locale_service.dart';
 import '../widgets/banner_ad_widget.dart';
+import 'about_security_screen.dart';
 
 /// WalletScreen: Tab Dompet Digital & Pencairan Saldo Multi-Currency & Dual-Language
 /// Otomatis menampilkan mata uang dan bahasa sesuai negara pengguna (ID / EN).
 class WalletScreen extends StatelessWidget {
   final double adsBalance;
+  final String pairToken;
 
-  const WalletScreen({Key? key, required this.adsBalance}) : super(key: key);
+  const WalletScreen({
+    Key? key,
+    required this.adsBalance,
+    this.pairToken = 'APK_USER',
+  }) : super(key: key);
+
+  void _openAboutAndSettings(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AboutSecurityScreen(pairToken: pairToken),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +41,13 @@ class WalletScreen extends StatelessWidget {
         backgroundColor: cardColor,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Pengaturan & Tentang Aplikasi',
+            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
+            onPressed: () => _openAboutAndSettings(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -116,6 +137,51 @@ class WalletScreen extends StatelessWidget {
                 label: Text(
                   LocaleService.withdrawBtn,
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Menu Pengaturan, Tentang Aplikasi & Kebijakan Keamanan (Settings / About)
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => _openAboutAndSettings(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00F0FF).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.shield_outlined, color: Color(0xFF00F0FF), size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pengaturan & Kebijakan Keamanan (About)',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            'Penjelasan aturan 1 IP, VPN/Proxy, Emulator & Privasi Data',
+                            style: TextStyle(color: Colors.grey, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+                  ],
                 ),
               ),
             ),

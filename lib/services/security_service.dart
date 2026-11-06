@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/about_security_screen.dart';
 
 /// SecurityService: Sistem Pertahanan Anti-Banned Play Store & AdNetwork
 /// 1. Deteksi VPN / Tunnel (`tun0`, `ppp0`, `wg0`, `tap0`, `utun`, `pptp`).
@@ -460,7 +461,26 @@ class SecurityService {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AboutSecurityScreen(pairToken: 'PROTECTED_DEVICE'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.policy_outlined, color: Color(0xFF38BDF8), size: 16),
+                    label: const Text(
+                      'Baca Kebijakan Keamanan Resmi (About)',
+                      style: TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     height: 48,

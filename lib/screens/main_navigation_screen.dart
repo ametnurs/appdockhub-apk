@@ -31,7 +31,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       AdsHubScreen(adsController: widget.adsController),
       StoreScreen(pairToken: widget.adsController.pairToken),
       AffiliateScreen(pairToken: widget.adsController.pairToken),
-      WalletScreen(adsBalance: widget.adsController.balanceAds),
+      WalletScreen(
+        adsBalance: widget.adsController.balanceAds,
+        pairToken: widget.adsController.pairToken,
+      ),
     ];
 
     return Scaffold(
