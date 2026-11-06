@@ -1009,7 +1009,7 @@ async function handleTelegramUpdate(update, env) {
       return;
     }
 
-    // 4. MENU: 💳 CEK SALDO (OPSI A: DOMPET TERPISAH PER GAME + KOMISI AFILIASI)
+    // 4. MENU: 💳 CEK SALDO (OPSI A: DOMPET TERPISAH PER GAME + KOMISI SOFTWARE DIGABUNG KE GAME SALDO TERBESAR)
     if (lowerText === '💳 cek saldo' || lowerText === '/saldo' || lowerText === 'saldo') {
       let bDirect = 0, bTeam = 0, bAdsLegacy = 0;
       let gameWallets = [];
@@ -1021,42 +1021,56 @@ async function handleTelegramUpdate(update, env) {
           bTeam = u.balance_team || 0;
           bAdsLegacy = u.balance_ads || 0;
           const gwRes = await env.DB.prepare(
-            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ? ORDER BY balance DESC'
           ).bind(chatId, u.app_pair_token || '').all();
           gameWallets = gwRes?.results || [];
         }
       }
 
+      const affiliateTotal = bDirect + bTeam;
       let gamesSection = '';
+
       if (gameWallets.length > 0) {
-        for (const g of gameWallets) {
-          const bal = g.balance || 0;
-          const statusWd = bal >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
-          gamesSection += `🎮 *${g.game_name}:* *Rp ${bal.toLocaleString('id-ID')}* _(${statusWd})_\n`;
+        // Urutkan dari saldo terbesar (index 0 adalah dompet game dengan saldo paling besar)
+        gameWallets.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+        for (let i = 0; i < gameWallets.length; i++) {
+          const g = gameWallets[i];
+          const rawBal = g.balance || 0;
+          // Gabungkan komisi software ke game dengan saldo paling besar (i === 0)
+          const combinedBal = i === 0 ? (rawBal + affiliateTotal) : rawBal;
+          const statusWd = combinedBal >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
+          const bonusTag = (i === 0 && affiliateTotal > 0)
+            ? ` _(Game Rp ${rawBal.toLocaleString('id-ID')} + Komisi Software Rp ${affiliateTotal.toLocaleString('id-ID')})_`
+            : '';
+          gamesSection += `🎮 *${g.game_name}:* *Rp ${combinedBal.toLocaleString('id-ID')}*${bonusTag} — *${statusWd}*\n`;
         }
       } else {
-        const statusWd = bAdsLegacy >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
-        gamesSection = `🎮 *Cyber Orbit:* *Rp ${bAdsLegacy.toLocaleString('id-ID')}* _(${statusWd})_\n`;
+        const combinedBal = bAdsLegacy + affiliateTotal;
+        const statusWd = combinedBal >= 50000 ? '✅ Siap WD' : '🔒 Min. WD Rp 50.000';
+        const bonusTag = affiliateTotal > 0
+          ? ` _(Game Rp ${bAdsLegacy.toLocaleString('id-ID')} + Komisi Software Rp ${affiliateTotal.toLocaleString('id-ID')})_`
+          : '';
+        gamesSection = `🎮 *Cyber Orbit:* *Rp ${combinedBal.toLocaleString('id-ID')}*${bonusTag} — *${statusWd}*\n`;
       }
-
-      const affiliateTotal = bDirect + bTeam;
 
       await sendTelegramMessage(chatId,
         `💳 *RINCIAN DOMPET EKOSISTEM ANDA*\n\n` +
-        `🤝 *DOMPET AFILIASI & REFERRAL:*\n` +
+        `🤝 *KOMISI PENJUALAN SOFTWARE & TIM:*\n` +
         `🥇 Komisi Langsung (Tier 1 - 30%): *Rp ${bDirect.toLocaleString('id-ID')}*\n` +
         `🥈 Komisi Tim & Referral Level: *Rp ${bTeam.toLocaleString('id-ID')}*\n` +
-        `💵 Total Saldo Afiliasi: *Rp ${affiliateTotal.toLocaleString('id-ID')}*\n\n` +
+        `💵 Total Komisi Software: *Rp ${affiliateTotal.toLocaleString('id-ID')}*\n` +
+        `_(Otomatis digabungkan ke dompet game dengan saldo terbesar Anda!)_\n\n` +
         `🕹️ *DOMPET MASING-MASING GAME (TERPISAH):*\n` +
         gamesSection +
         `-----------------------------------------\n` +
         `ℹ️ *Ketentuan Pencairan:*\n` +
-        `Saldo antar-game bersifat terpisah (tidak dapat digabungkan). Setiap dompet game wajib mencapai minimal *Rp 50.000* untuk dapat dicairkan ke E-Wallet.`
+        `• Saldo antar-game bersifat terpisah (tidak dapat digabungkan).\n` +
+        `• *Keistimewaan Penjual Software:* Komisi penjualan software otomatis digabung dengan *1 game yang saldonya paling besar* agar langsung mempercepat pencairan *Rp 50.000*!`
       );
       return;
     }
 
-    // 5. MENU: 💸 TARIK SALDO (VALIDASI DOMPET TERPISAH >= RP 50.000 PER GAME)
+    // 5. MENU: 💸 TARIK SALDO (KOMISI SOFTWARE DIGABUNG KE GAME SALDO TERBESAR)
     if (lowerText === '💸 tarik saldo' || lowerText === '/tarik' || lowerText === 'tarik') {
       let withdrawableTotal = 0;
       let eligibleSources = [];
@@ -1065,24 +1079,32 @@ async function handleTelegramUpdate(update, env) {
         const u = await env.DB.prepare('SELECT balance_direct, balance_team, balance_ads, app_pair_token FROM users WHERE telegram_id = ?').bind(chatId).first();
         if (u) {
           const affBal = (u.balance_direct || 0) + (u.balance_team || 0);
-          if (affBal >= 50000) {
-            withdrawableTotal += affBal;
-            eligibleSources.push(`Dompet Afiliasi (Rp ${affBal.toLocaleString('id-ID')})`);
-          }
           const gwRes = await env.DB.prepare(
-            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+            'SELECT game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ? ORDER BY balance DESC'
           ).bind(chatId, u.app_pair_token || '').all();
           const gwList = gwRes?.results || [];
+
           if (gwList.length > 0) {
-            for (const g of gwList) {
-              if ((g.balance || 0) >= 50000) {
-                withdrawableTotal += g.balance;
-                eligibleSources.push(`${g.game_name} (Rp ${(g.balance || 0).toLocaleString('id-ID')})`);
+            gwList.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+            for (let i = 0; i < gwList.length; i++) {
+              const g = gwList[i];
+              // Game dengan saldo terbesar (i === 0) otomatis mendapat gabungan komisi software (affBal)
+              const effectiveBal = i === 0 ? ((g.balance || 0) + affBal) : (g.balance || 0);
+              if (effectiveBal >= 50000) {
+                withdrawableTotal += effectiveBal;
+                eligibleSources.push(
+                  i === 0 && affBal > 0
+                    ? `${g.game_name} + Komisi Software (Rp ${effectiveBal.toLocaleString('id-ID')})`
+                    : `${g.game_name} (Rp ${effectiveBal.toLocaleString('id-ID')})`
+                );
               }
             }
-          } else if ((u.balance_ads || 0) >= 50000) {
-            withdrawableTotal += u.balance_ads;
-            eligibleSources.push(`Cyber Orbit (Rp ${(u.balance_ads || 0).toLocaleString('id-ID')})`);
+          } else {
+            const effectiveBal = (u.balance_ads || 0) + affBal;
+            if (effectiveBal >= 50000) {
+              withdrawableTotal += effectiveBal;
+              eligibleSources.push(`Cyber Orbit + Komisi Software (Rp ${effectiveBal.toLocaleString('id-ID')})`);
+            }
           }
         }
       }
@@ -1090,8 +1112,8 @@ async function handleTelegramUpdate(update, env) {
       if (withdrawableTotal < 50000) {
         await sendTelegramMessage(chatId,
           `⚠️ *BELUM ADA DOMPET YANG MENCAPAI RP 50.000*\n\n` +
-          `Sesuai kebijakan *Dompet Game Terpisah*, saldo dari game yang berbeda tidak dapat digabungkan untuk mencapai batas minimal penarikan.\n\n` +
-          `Pastikan minimal salah satu Dompet Game atau Dompet Afiliasi Anda telah mencapai *Rp 50.000* (Ketik *💳 Cek Saldo* untuk melihat rincian tiap game).`
+          `Sesuai kebijakan *Dompet Game Terpisah*, saldo dari game yang berbeda tidak dapat digabungkan.\n\n` +
+          `💡 *Tips Cepat Cair:* Jual 1 lisensi software lewat link afiliasi Anda! Komisi penjualan software (*Rp 29.700/closing*) akan *otomatis digabungkan dengan dompet game Anda yang saldonya paling besar* sehingga langsung siap ditarik!`
         );
         return;
       }
@@ -1108,7 +1130,7 @@ async function handleTelegramUpdate(update, env) {
       return;
     }
 
-    // 6. PROSES FORM PENARIKAN (HANYA POTONG DOMPET YANG SUDAH >= RP 50.000)
+    // 6. PROSES FORM PENARIKAN (KOMISI SOFTWARE + GAME SALDO TERBESAR >= RP 50.000)
     if (lowerText.startsWith('tarik ') && rawText.split(/\s+/).length >= 5) {
       const words = rawText.split(/\s+/);
       const amount = parseInt(words[1]);
@@ -1131,48 +1153,69 @@ async function handleTelegramUpdate(update, env) {
 
         const affBal = (u.balance_direct || 0) + (u.balance_team || 0);
         const gwRes = await env.DB.prepare(
-          'SELECT pair_token, game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ?'
+          'SELECT pair_token, game_id, game_name, balance FROM game_wallets WHERE telegram_id = ? OR pair_token = ? ORDER BY balance DESC'
         ).bind(chatId, u.app_pair_token || '').all();
         const gwList = gwRes?.results || [];
+        gwList.sort((a, b) => (b.balance || 0) - (a.balance || 0));
 
-        let eligibleTotal = affBal >= 50000 ? affBal : 0;
-        for (const g of gwList) {
-          if ((g.balance || 0) >= 50000) eligibleTotal += g.balance;
+        let eligibleTotal = 0;
+        if (gwList.length > 0) {
+          for (let i = 0; i < gwList.length; i++) {
+            const eff = i === 0 ? ((gwList[i].balance || 0) + affBal) : (gwList[i].balance || 0);
+            if (eff >= 50000) eligibleTotal += eff;
+          }
+        } else {
+          const eff = (u.balance_ads || 0) + affBal;
+          if (eff >= 50000) eligibleTotal += eff;
         }
 
         if (eligibleTotal < amount) {
           await sendTelegramMessage(
             chatId,
-            `⚠️ Saldo dompet yang memenuhi syarat (>= Rp 50.000 per game) tidak mencukupi! Saldo siap cair: Rp ${eligibleTotal.toLocaleString('id-ID')}`
+            `⚠️ Saldo dompet yang memenuhi syarat (>= Rp 50.000) tidak mencukupi! Saldo siap cair: Rp ${eligibleTotal.toLocaleString('id-ID')}`
           );
           return;
         }
 
         let rem = amount;
-        // 1. Potong dari dompet afiliasi jika >= 50.000
-        if (affBal >= 50000 && rem > 0) {
-          let d = u.balance_direct || 0;
-          let t = u.balance_team || 0;
-          const cutD = Math.min(d, rem); rem -= cutD; d -= cutD;
-          const cutT = Math.min(t, rem); rem -= cutT; t -= cutT;
-          await env.DB.prepare('UPDATE users SET balance_direct = ?, balance_team = ? WHERE telegram_id = ?').bind(d, t, chatId).run();
-        }
-
-        // 2. Potong dari masing-masing game_wallets yang sudah >= 50.000
-        for (const g of gwList) {
-          if (rem <= 0) break;
-          let gb = g.balance || 0;
-          if (gb >= 50000) {
-            const cutG = Math.min(gb, rem);
-            rem -= cutG;
-            gb -= cutG;
-            await env.DB.prepare(
-              'UPDATE game_wallets SET balance = ? WHERE pair_token = ? AND game_id = ?'
-            ).bind(gb, g.pair_token, g.game_id).run();
-            if (g.game_id === 'cyber_orbit') {
-              await env.DB.prepare('UPDATE users SET balance_ads = ? WHERE telegram_id = ?').bind(gb, chatId).run();
+        if (gwList.length > 0) {
+          for (let i = 0; i < gwList.length; i++) {
+            if (rem <= 0) break;
+            const g = gwList[i];
+            const gb = g.balance || 0;
+            const eff = i === 0 ? (gb + affBal) : gb;
+            if (eff >= 50000) {
+              if (i === 0 && affBal > 0) {
+                // Potong terlebih dahulu dari komisi software (balance_direct -> balance_team), sisanya dari dompet game terbesar
+                let d = u.balance_direct || 0;
+                let t = u.balance_team || 0;
+                const cutD = Math.min(d, rem); rem -= cutD; d -= cutD;
+                const cutT = Math.min(t, rem); rem -= cutT; t -= cutT;
+                await env.DB.prepare('UPDATE users SET balance_direct = ?, balance_team = ? WHERE telegram_id = ?').bind(d, t, chatId).run();
+              }
+              if (rem > 0 && gb > 0) {
+                const cutG = Math.min(gb, rem);
+                rem -= cutG;
+                const newGb = gb - cutG;
+                await env.DB.prepare(
+                  'UPDATE game_wallets SET balance = ? WHERE pair_token = ? AND game_id = ?'
+                ).bind(newGb, g.pair_token, g.game_id).run();
+                if (g.game_id === 'cyber_orbit') {
+                  await env.DB.prepare('UPDATE users SET balance_ads = ? WHERE telegram_id = ?').bind(newGb, chatId).run();
+                }
+              }
             }
           }
+        } else {
+          let d = u.balance_direct || 0;
+          let t = u.balance_team || 0;
+          let a = u.balance_ads || 0;
+          const cutD = Math.min(d, rem); rem -= cutD; d -= cutD;
+          const cutT = Math.min(t, rem); rem -= cutT; t -= cutT;
+          const cutA = Math.min(a, rem); rem -= cutA; a -= cutA;
+          await env.DB.prepare(
+            'UPDATE users SET balance_direct = ?, balance_team = ?, balance_ads = ? WHERE telegram_id = ?'
+          ).bind(d, t, a, chatId).run();
         }
       }
 

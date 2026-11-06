@@ -244,11 +244,12 @@ class AboutSecurityScreen extends StatelessWidget {
             _buildPolicyCard(
               icon: Icons.account_balance_wallet_rounded,
               iconColor: accentCyan,
-              title: '5. Kebijakan Dompet Game Terpisah (Isolated Game Wallet)',
-              badge: 'Multi-Game Policy',
+              title: '5. Kebijakan Dompet Game Terpisah & Penggabungan Komisi Software',
+              badge: 'Multi-Game & Affiliate Policy',
               description:
                   'Setiap aplikasi game di dalam ekosistem AppDock Hub memiliki pencatatan dompet saldo yang berdiri sendiri (terpisah per game).\n\n'
-                  '• Ketentuan Pencairan: Saldo yang diperoleh dari satu game tidak dapat digabungkan dengan saldo dari game lain. Setiap dompet game wajib mencapai batas minimal penarikan (Rp 50.000) secara mandiri untuk dapat dicairkan melalui Bot Resmi.',
+                  '• Ketentuan Pencairan Game: Saldo dari satu game tidak dapat digabungkan dengan saldo dari game lain dan wajib mencapai batas minimal penarikan (Rp 50.000) secara mandiri.\n'
+                  '• Keistimewaan Penjual Software: Apabila pengguna berhasil menjual lisensi software resmi melalui program afiliasi, maka komisi penjualan software akan otomatis digabungkan dengan dompet game yang memiliki saldo paling besar agar langsung mempercepat pencairan!',
             ),
             const SizedBox(height: 12),
 
