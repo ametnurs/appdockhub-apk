@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
+import '../services/security_service.dart';
 
 /// AdsController: State management traffic retention, limit 10 iklan harian,
 /// dan Smart Rewarded Ad Engine:
@@ -116,6 +117,7 @@ class AdsController extends ChangeNotifier {
   }
 
   /// Memutar Rewarded Ad:
+  /// - Cek Keamanan Anti-Fraud (2 IP Sama, VPN/Proxy, Cooldown Klik) terlebih dahulu!
   /// - Jika Real AdMob tersedia, putar Real AdMob.
   /// - Jika Real AdMob belum tersedia (karena belum ada URL Play Store), putar
   ///   Smart Rewarded Ad Player 15 Detik (Monetag / Adsterra / Mobidea) yang menghasilkan uang nyata!
@@ -126,8 +128,38 @@ class AdsController extends ChangeNotifier {
       return false;
     }
 
+    // 0A. Cek Cooldown Anti-Spam Klik Iklan agar akun AdNetwork aman dari Invalid Traffic
+    final cooldownRemaining = SecurityService.getRemainingAdCooldown();
+    if (cooldownRemaining > 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFF59E0B),
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              '⏳ Mohon tunggu $cooldownRemaining detik sebelum memutar iklan berikutnya (Proteksi Anti-Spam).',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+      return false;
+    }
+
     _isLoading = true;
     notifyListeners();
+
+    // 0B. Verifikasi Keamanan: Deteksi Proxy/VPN & Deteksi 2 Akun pada 1 IP yang Sama
+    final isSecure = await SecurityService.verifyAndEnforceSecurity(
+      context: context,
+      backendBaseUrl: backendBaseUrl,
+      pairToken: _pairToken,
+    );
+    if (!isSecure) {
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
 
     // 1. Jika Real AdMob sudah aktif & ter-load, tayangkan Real AdMob
     if (_rewardedAd != null) {
@@ -224,6 +256,7 @@ class AdsController extends ChangeNotifier {
     final currencyCode = CurrencyService.current.code;
 
     // 1. Update state lokal secara instan agar UI & Game langsung merespons tanpa jeda
+    SecurityService.markAdFinished();
     _adsWatchedToday += 1;
     _balanceAds += rewardAmt;
     _isLimitReached = _adsWatchedToday >= maxDailyQuota;

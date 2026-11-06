@@ -8,6 +8,7 @@ import '../controllers/ads_controller.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/locale_service.dart';
+import '../services/security_service.dart';
 
 /// CyberOrbitGameScreen: Native Flutter 60 FPS Canvas Engine ("Cyber Orbit: Quantum Core").
 /// Menggantikan WebView sepenuhnya agar 100% bebas crash OpenGL/Renderer di Emulator & HP
@@ -80,6 +81,20 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
 
     _setupDemoOrbit();
     _ticker = createTicker(_onTick)..start();
+
+    // Cek keamanan saat game pertama kali dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDeviceAndIpSecurity();
+    });
+  }
+
+  Future<bool> _checkDeviceAndIpSecurity() async {
+    if (!mounted) return false;
+    return await SecurityService.verifyAndEnforceSecurity(
+      context: context,
+      backendBaseUrl: widget.adsController.backendBaseUrl,
+      pairToken: widget.adsController.pairToken,
+    );
   }
 
   @override
@@ -98,7 +113,10 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
       _lastTick = Duration.zero;
     } else if (state == AppLifecycleState.resumed) {
       _lastTick = Duration.zero;
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        _checkDeviceAndIpSecurity();
+      }
     }
   }
 
@@ -121,8 +139,10 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
     return math.max(5, level * 5);
   }
 
-  void _startNewGame() {
+  Future<void> _startNewGame() async {
     if (!_isMuted) HapticFeedback.lightImpact();
+    final isSafe = await _checkDeviceAndIpSecurity();
+    if (!isSafe || !mounted) return;
     setState(() {
       _level = 1;
       _stage = 1;

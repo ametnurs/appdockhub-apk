@@ -15,12 +15,17 @@ CREATE TABLE IF NOT EXISTS users (
     last_ad_watch_date TEXT,             -- Format: YYYY-MM-DD untuk auto-reset harian
     max_level INTEGER DEFAULT 1,         -- Level tertinggi game yang diselesaikan
     last_milestone_awarded INTEGER DEFAULT 0, -- Milestone kelipatan 10 terakhir yang sudah dikirim ke sponsor
+    last_ip TEXT,                        -- IP Publik terakhir yang mengakses game/iklan
+    ip_warnings INTEGER DEFAULT 0,       -- Jumlah peringatan pelanggaran multi-device / proxy / IP ganda
+    is_banned INTEGER DEFAULT 0,         -- Status Banned (1 = Banned karena curang / multi-IP / VPN)
+    ban_reason TEXT,                     -- Alasan akun/perangkat di-banned
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexing users untuk query cepat saat pairing APK & referral tracking
+-- Indexing users untuk query cepat saat pairing APK, referral tracking & deteksi IP ganda
 CREATE INDEX IF NOT EXISTS idx_users_pair_token ON users(app_pair_token);
 CREATE INDEX IF NOT EXISTS idx_users_referrer ON users(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_users_last_ip ON users(last_ip);
 
 -- 2. TABEL LICENSES (Pengelolaan Lisensi Multi-Software Terikat HWID)
 CREATE TABLE IF NOT EXISTS licenses (

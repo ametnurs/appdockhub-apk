@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/ads_controller.dart';
 import '../services/deep_link_service.dart';
+import '../services/security_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
 /// Model Misi Internal Game (Menyembunyikan merek AdNetwork agar terlihat bawaan asli game)
@@ -276,7 +277,15 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
   }
 
   /// Membuka Misi langsung di dalam aplikasi (In-App WebView) tanpa keluar ke browser
-  void _openOfferwallInApp(OfferwallProviderItem provider) {
+  /// dengan pengecekan keamanan Anti-Proxy/VPN & Anti-Multi-IP terlebih dahulu!
+  Future<void> _openOfferwallInApp(OfferwallProviderItem provider) async {
+    final isSafe = await SecurityService.verifyAndEnforceSecurity(
+      context: context,
+      backendBaseUrl: widget.adsController.backendBaseUrl,
+      pairToken: widget.adsController.pairToken,
+    );
+    if (!isSafe || !mounted) return;
+
     final userId = widget.adsController.pairToken.isNotEmpty
         ? widget.adsController.pairToken
         : 'guest_user';

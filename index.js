@@ -128,6 +128,13 @@ export default {
       }
 
       // ----------------------------------------------------------------------
+      // ROUTE 3D: POST /api/security/check -> DETEKSI VPN/PROXY & MULTI-AKUN 1 IP
+      // ----------------------------------------------------------------------
+      if (url.pathname === '/api/security/check' && request.method === 'POST') {
+        return await handleSecurityCheck(request, env);
+      }
+
+      // ----------------------------------------------------------------------
       // ROUTE 4: GET /verify -> CEK STATUS LISENSI HWID OLEH DESKTOP/APK
       // ----------------------------------------------------------------------
       if (url.pathname === '/verify') {
@@ -308,6 +315,15 @@ async function handleAdsReward(request, env) {
     user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
   }
 
+  // Tolak jika akun sudah di-banned karena curang / multi-IP / proxy
+  if (user && user.is_banned === 1) {
+    return jsonResponse({
+      success: false,
+      banned: true,
+      message: 'Akun Anda telah di-BANNED karena pelanggaran keamanan (Multi-IP / Proxy / VPN).'
+    }, 403);
+  }
+
   // Cek apakah tanggal sudah berganti (Auto-Reset Harian)
   let watchedToday = user.ads_watched_today || 0;
   if (user.last_ad_watch_date !== todayStr) {
@@ -394,8 +410,8 @@ async function handleGameLevelCleared(request, env) {
   }
 
   const user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
-  if (!user) {
-    return jsonResponse({ success: true, level });
+  if (!user || user.is_banned === 1) {
+    return jsonResponse({ success: false, banned: true, level });
   }
 
   // Update max_level user
@@ -511,6 +527,150 @@ async function handleOfferwallPostback(request, env, url) {
 
   // Mayoritas jaringan Offerwall (Torox, CPALead, AdGate) mengharapkan HTTP 200 dengan body "1" atau "OK"
   return new Response('1', { status: 200, headers: { 'Content-Type': 'text/plain' } });
+}
+
+// ============================================================================
+// 2D. HANDLER KEAMANAN ANTI-FRAUD (DETEKSI PROXY/VPN, DATACENTER ASN & MULTI-IP)
+// Melindungi akun AdNetwork & Play Store dari Invalid Traffic / Tuyul / Bot Farm
+// ============================================================================
+const BLOCKED_ASN_KEYWORDS = [
+  'digitalocean', 'linode', 'akamai', 'choopa', 'vultr', 'ovh', 'hetzner',
+  'contabo', 'amazonaws', 'google cloud', 'microsoft', 'azure', 'cloudflare',
+  'm247', 'datapacket', 'hostinger', 'scaleway', 'upcloud', 'kamatera',
+  'vpn', 'proxy', 'tor', 'hosting', 'datacenter', 'server', 'colocation'
+];
+
+async function handleSecurityCheck(request, env) {
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ allowed: true });
+  }
+
+  const pairToken = (body.pairToken || '').trim();
+  const clientProxyFlag = Boolean(body.clientProxyDetected);
+  const clientVpnFlag = Boolean(body.clientVpnDetected);
+
+  // Ambil IP asli dan metadata jaringan dari Cloudflare Edge
+  const clientIp = (
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0] ||
+    '0.0.0.0'
+  ).trim();
+
+  const cf = request.cf || {};
+  const asOrg = String(cf.asOrganization || '').toLowerCase();
+  const isProxyHeader = Boolean(
+    request.headers.get('Via') ||
+    request.headers.get('X-Proxy-ID') ||
+    request.headers.get('Proxy-Connection')
+  );
+
+  const isDatacenterOrVpnIp = BLOCKED_ASN_KEYWORDS.some((kw) => asOrg.includes(kw));
+  const isUsingProxyOrVpn = clientProxyFlag || clientVpnFlag || isProxyHeader || isDatacenterOrVpnIp;
+
+  if (!env.DB || !pairToken) {
+    if (isUsingProxyOrVpn) {
+      return jsonResponse({
+        allowed: false,
+        status: 'PROXY_DETECTED',
+        ip: clientIp,
+        warnings: 1,
+        maxWarnings: 3,
+        message: 'Terdeteksi penggunaan Proxy / VPN / IP Server! Matikan VPN/Proxy dan tutup aplikasi sekarang, atau akun Anda akan di-BANNED permanen!'
+      });
+    }
+    return jsonResponse({ allowed: true, status: 'SAFE', ip: clientIp });
+  }
+
+  // Pastikan kolom keamanan tersedia di tabel users
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
+  if (!user) {
+    const tempTelegramId = `temp_${pairToken.slice(0, 8)}`;
+    await env.DB.prepare(
+      'INSERT INTO users (telegram_id, app_pair_token, balance_direct, balance_team, balance_ads, ads_watched_today, last_ad_watch_date) VALUES (?, ?, 0, 0, 0, 0, ?)'
+    ).bind(tempTelegramId, pairToken, todayStr).run();
+    user = await env.DB.prepare('SELECT * FROM users WHERE app_pair_token = ?').bind(pairToken).first();
+  }
+
+  // 1. Cek apakah user sudah berstatus BANNED
+  if (user && user.is_banned === 1) {
+    return jsonResponse({
+      allowed: false,
+      status: 'BANNED',
+      ip: clientIp,
+      reason: user.ban_reason || 'Pelanggaran Keamanan (Multi-Akun IP Sama / Penggunaan Proxy/VPN)',
+      message: 'AKUN & PERANGKAT ANDA TELAH DI-BANNED PERMANEN karena melanggar kebijakan keamanan jaringan (Multi-IP / Proxy / VPN).'
+    });
+  }
+
+  // 2. Cek apakah menggunakan Proxy / VPN / Datacenter IP
+  if (isUsingProxyOrVpn) {
+    const newWarnings = (user?.ip_warnings || 0) + 1;
+    const isNowBanned = newWarnings >= 3 ? 1 : 0;
+    const reason = 'Menggunakan Proxy / VPN / IP Server Datacenter';
+
+    try {
+      await env.DB.prepare(
+        'UPDATE users SET ip_warnings = ?, is_banned = ?, ban_reason = ?, last_ip = ? WHERE app_pair_token = ?'
+      ).bind(newWarnings, isNowBanned, isNowBanned ? reason : null, clientIp, pairToken).run();
+    } catch (_) {}
+
+    return jsonResponse({
+      allowed: false,
+      status: isNowBanned ? 'BANNED' : 'PROXY_DETECTED',
+      ip: clientIp,
+      warnings: newWarnings,
+      maxWarnings: 3,
+      message: isNowBanned
+        ? 'AKUN ANDA TELAH DI-BANNED PERMANEN karena tetap menggunakan Proxy / VPN setelah diperingatkan!'
+        : `PERINGATAN KEAMANAN (${newWarnings}/3): Terdeteksi penggunaan Proxy / VPN (${clientIp})! Segera matikan VPN/Proxy dan tutup aplikasi sekarang, atau akun Anda akan di-BANNED permanen!`
+    });
+  }
+
+  // 3. Cek apakah ada akun/perangkat LAIN yang mengakses dari IP yang sama hari ini (Deteksi 2 Akses di 1 IP / Tuyul)
+  if (clientIp !== '0.0.0.0') {
+    try {
+      const duplicateIpUser = await env.DB.prepare(
+        'SELECT app_pair_token, telegram_id FROM users WHERE last_ip = ? AND app_pair_token != ? AND last_ad_watch_date = ? LIMIT 1'
+      ).bind(clientIp, pairToken, todayStr).first();
+
+      if (duplicateIpUser) {
+        const newWarnings = (user?.ip_warnings || 0) + 1;
+        const isNowBanned = newWarnings >= 3 ? 1 : 0;
+        const reason = `Terdeteksi 2 Akun/Perangkat berbeda mengakses dari IP yang sama (${clientIp})`;
+
+        await env.DB.prepare(
+          'UPDATE users SET ip_warnings = ?, is_banned = ?, ban_reason = ?, last_ip = ? WHERE app_pair_token = ?'
+        ).bind(newWarnings, isNowBanned, isNowBanned ? reason : null, clientIp, pairToken).run();
+
+        return jsonResponse({
+          allowed: false,
+          status: isNowBanned ? 'BANNED' : 'DUPLICATE_IP_WARNING',
+          ip: clientIp,
+          warnings: newWarnings,
+          maxWarnings: 3,
+          message: isNowBanned
+            ? `AKUN ANDA DI-BANNED PERMANEN karena terdeteksi mengakses dari IP ganda (${clientIp}) berulang kali!`
+            : `PERINGATAN KERAS (${newWarnings}/3): Terdeteksi 2 akses akun/perangkat pada alamat IP yang sama (${clientIp})! Dilarang keras bermain menggunakan banyak akun dalam 1 jaringan IP. Segera tutup aplikasi sekarang atau akun Anda akan di-BANNED permanen!`
+        });
+      }
+
+      // Simpan IP terakhir pengguna jika aman
+      await env.DB.prepare(
+        'UPDATE users SET last_ip = ? WHERE app_pair_token = ?'
+      ).bind(clientIp, pairToken).run();
+    } catch (_) {}
+  }
+
+  return jsonResponse({
+    allowed: true,
+    status: 'SAFE',
+    ip: clientIp,
+    warnings: user?.ip_warnings || 0
+  });
 }
 
 // ============================================================================
