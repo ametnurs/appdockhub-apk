@@ -63,7 +63,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
               });
               // Suntikkan konfigurasi bahasa & mata uang dinamis ke game JavaScript
               final rewardText = CurrencyService.formattedReward;
-              final btnClaimText = '${LocaleService.gameClaimBtn} $rewardText ${LocaleService.gameWatchVideo}';
+              final btnClaimText = LocaleService.gameClaimBtn;
               final jsConfig = jsonEncode({
                 'rewardText': rewardText,
                 'btnClaimText': btnClaimText,

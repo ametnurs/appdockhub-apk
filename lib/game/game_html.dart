@@ -384,7 +384,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           <span class="hud-label">Level</span>
           <span class="hud-value amber" id="hud-level">LVL 01</span>
         </div>
-        <div class="hud-pill">
+        <div class="hud-pill" style="display:none;">
           <span class="hud-label">Game</span>
           <span class="hud-value" id="hud-stage" style="color:#00f0ff;">1/5</span>
         </div>
@@ -422,7 +422,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
     <!-- LEVEL / GAME CLEARED SCREEN -->
     <div class="overlay-screen hidden" id="screen-clear">
       <div class="panel victory">
-        <div class="eyebrow" id="clear-sector-label">Game 1/5 Selesai</div>
+        <div class="eyebrow" id="clear-sector-label" style="display:none;">Game Selesai</div>
         <h2 class="title-main" id="clear-title" style="font-size:24px;">GAME SELESAI!</h2>
 
         <div class="stars-row" id="clear-stars">
@@ -431,7 +431,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           <svg class="star-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
         </div>
 
-        <div class="stats-grid">
+        <div class="stats-grid" style="display:none;">
           <div class="stat-box">
             <div class="label" id="label-reward-saldo">Reward Saldo</div>
             <div class="val amber" id="clear-bonus">+Rp 10</div>
@@ -445,12 +445,12 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <!-- Peringatan Wajib Iklan -->
         <div style="background: rgba(255, 153, 0, 0.12); border: 1px solid rgba(255, 153, 0, 0.35); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
           <span style="font-size: 15px;">🔒</span>
-          <span style="font-size: 11px; font-weight: 700; color: #ffb74d;" id="clear-lock-notice">Wajib tonton 1 video iklan sampai selesai untuk membuka ronde/level berikutnya!</span>
+          <span style="font-size: 11px; font-weight: 700; color: #ffb74d;" id="clear-lock-notice">Wajib tonton video iklan sampai selesai untuk melanjutkan!</span>
         </div>
 
         <!-- Tombol Wajib Nonton Iklan (Satu-satunya jalan untuk lanjut) -->
         <button class="btn-primary reward-btn" id="btn-claim-reward" onclick="window.claimReward()" style="margin-bottom: 0;">
-          📺 NONTON IKLAN & BUKA GAME BERIKUTNYA (+RP 10)
+          📺 NONTON IKLAN & LANJUTKAN
         </button>
       </div>
     </div>
@@ -837,7 +837,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                 this.sound.playCrash();
                 this.setState('GAME_OVER');
                 document.getElementById('gameover-score').textContent = this.score.toLocaleString();
-                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0') + ' (Game ' + this.stage + '/' + this.maxStages + ')';
+                document.getElementById('gameover-level').textContent = 'LVL ' + String(this.level).padStart(2, '0');
                 if (window.FlutterBridge) {
                   window.FlutterBridge.postMessage(JSON.stringify({
                     event: 'GAME_OVER',
@@ -862,19 +862,15 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                     setTimeout(() => s.classList.add('earned'), idx * 150);
                   });
 
-                  const sectorLabelEl = document.getElementById('clear-sector-label');
                   const titleEl = document.getElementById('clear-title');
-                  const progressEl = document.getElementById('clear-progress');
                   const btnClaimEl = document.getElementById('btn-claim-reward');
-                  const rewardText = (this.localeCfg && this.localeCfg.rewardText) ? this.localeCfg.rewardText : '+Rp 10';
+                  const cleanBtnText = (this.localeCfg && this.localeCfg.btnClaimText) ? this.localeCfg.btnClaimText : '📺 NONTON IKLAN & LANJUTKAN';
 
                   if (this.stage >= this.maxStages) {
                     // Level Selesai Penuh!
                     this.isLevelComplete = true;
-                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' Selesai (' + this.maxStages + '/' + this.maxStages + ' Game)';
                     if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleClear) ? this.localeCfg.titleClear : 'LEVEL SELESAI!';
-                    if (progressEl) progressEl.textContent = this.maxStages + '/' + this.maxStages + ' Game Selesai';
-                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA LEVEL ' + (this.level + 1) + ' (' + rewardText + ')';
+                    if (btnClaimEl) btnClaimEl.textContent = cleanBtnText;
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({
@@ -887,10 +883,8 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                   } else {
                     // 1 Game Selesai dari maxStages
                     this.isLevelComplete = false;
-                    if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' • Game ' + this.stage + '/' + this.maxStages + ' Selesai';
-                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : ('GAME ' + this.stage + '/' + this.maxStages + ' SELESAI!');
-                    if (progressEl) progressEl.textContent = this.stage + ' / ' + this.maxStages + ' Game';
-                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA GAME ' + (this.stage + 1) + '/' + this.maxStages + ' (' + rewardText + ')';
+                    if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : 'GAME SELESAI!';
+                    if (btnClaimEl) btnClaimEl.textContent = cleanBtnText;
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({

@@ -37,8 +37,8 @@ class LocaleService {
   // Game HTML strings
   static String get gameLevelCleared => isIndonesian ? 'LEVEL SELESAI!' : 'LEVEL CLEARED!';
   static String get gameStageCleared => isIndonesian ? 'GAME SELESAI!' : 'GAME CLEARED!';
-  static String get gameClaimBtn => isIndonesian ? '🎁 KLAIM' : '🎁 CLAIM';
-  static String get gameWatchVideo => isIndonesian ? '(NONTON VIDEO)' : '(WATCH VIDEO)';
+  static String get gameClaimBtn => isIndonesian ? '📺 NONTON IKLAN & LANJUTKAN' : '📺 WATCH AD & CONTINUE';
+  static String get gameWatchVideo => '';
   static String get gameSkipBtn => isIndonesian ? 'LEWATI KE GAME BERIKUTNYA' : 'NEXT GAME';
   static String get gameNextStageBtn => isIndonesian ? 'LANJUT KE GAME BERIKUTNYA' : 'NEXT GAME';
   static String get gameNextLevelBtn => isIndonesian ? 'LANJUT KE LEVEL BERIKUTNYA' : 'NEXT LEVEL';
