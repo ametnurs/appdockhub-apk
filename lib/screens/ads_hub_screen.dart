@@ -225,13 +225,14 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
     ),
     OfferwallProviderItem(
       id: 'quest_daily_visit',
-      name: 'Misi Kunjungan Cepat',
-      badge: '💎 MUDAH',
+      name: 'Misi Kunjungan Cepat (Server 3)',
+      badge: '💎 MUDAH & AKTIF',
       subtitle: 'Buka halaman misi harian selama beberapa detik untuk klaim ekstra poin.',
       rewardRange: 'Rp 100 - Rp 25.000 / Misi',
       gradientColors: [Color(0xFFE11D48), Color(0xFFFB7185)],
       icon: Icons.ads_click_rounded,
-      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
+      // Adsterra Smartlink Resmi Anda (https://asiafilm.org/4/86ef29736adda09bc43e293a1e401d5e)
+      baseUrl: 'https://asiafilm.org/4/86ef29736adda09bc43e293a1e401d5e?subid={USER_ID}',
     ),
     OfferwallProviderItem(
       id: 'quest_flash',
