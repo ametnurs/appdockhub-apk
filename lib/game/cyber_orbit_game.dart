@@ -94,9 +94,21 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
         if (widget.adsController.isLimitReached) {
           widget.adsController.showConversionFunnelDialog(context);
         } else {
-          await widget.adsController.watchRewardedAd(context);
-          final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
-          _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
+          final success = await widget.adsController.watchRewardedAd(context);
+          if (success) {
+            final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
+            _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: Color(0xFFE11D48),
+                  behavior: SnackBarBehavior.floating,
+                  content: Text('⚠️ Anda wajib menonton video iklan sampai selesai untuk membuka ronde/level berikutnya!'),
+                ),
+              );
+            }
+          }
         }
       } else if (event == 'STAGE_CLEARED') {
         debugPrint('🎯 Game ${data['stage']}/5 di Level ${data['level']} Selesai! Skor: ${data['score']}');

@@ -436,11 +436,16 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Tombol Klaim Reward Ad (Terhubung ke Flutter) -->
-        <button class="btn-primary reward-btn" id="btn-claim-reward">
-          🎁 KLAIM +RP 10 (NONTON VIDEO)
+        <!-- Peringatan Wajib Iklan -->
+        <div style="background: rgba(255, 153, 0, 0.12); border: 1px solid rgba(255, 153, 0, 0.35); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 15px;">🔒</span>
+          <span style="font-size: 11px; font-weight: 700; color: #ffb74d;" id="clear-lock-notice">Wajib tonton 1 video iklan sampai selesai untuk membuka ronde/level berikutnya!</span>
+        </div>
+
+        <!-- Tombol Wajib Nonton Iklan (Satu-satunya jalan untuk lanjut) -->
+        <button class="btn-primary reward-btn" id="btn-claim-reward" style="margin-bottom: 0;">
+          📺 NONTON IKLAN & BUKA GAME BERIKUTNYA (+RP 10)
         </button>
-        <button class="btn-secondary" id="btn-next-level">LANJUT KE GAME BERIKUTNYA</button>
       </div>
     </div>
 
@@ -694,7 +699,6 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           });
 
           document.getElementById('btn-start').addEventListener('click', () => this.startNewGame());
-          document.getElementById('btn-next-level').addEventListener('click', () => this.advanceNext());
           document.getElementById('btn-retry').addEventListener('click', () => {
             this.loadStage(this.level, this.stage);
             this.setState('PLAYING');
@@ -815,7 +819,8 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                   const sectorLabelEl = document.getElementById('clear-sector-label');
                   const titleEl = document.getElementById('clear-title');
                   const progressEl = document.getElementById('clear-progress');
-                  const btnNextEl = document.getElementById('btn-next-level');
+                  const btnClaimEl = document.getElementById('btn-claim-reward');
+                  const rewardText = (this.localeCfg && this.localeCfg.rewardText) ? this.localeCfg.rewardText : '+Rp 10';
 
                   if (this.stage >= this.maxStages) {
                     // Level Selesai Penuh (5 dari 5 game selesai!)
@@ -823,7 +828,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                     if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' Selesai (5/5 Game)';
                     if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleClear) ? this.localeCfg.titleClear : 'LEVEL SELESAI!';
                     if (progressEl) progressEl.textContent = '5/5 Game Selesai';
-                    if (btnNextEl) btnNextEl.textContent = (this.localeCfg && this.localeCfg.btnNextLevel) ? this.localeCfg.btnNextLevel : 'LANJUT KE LEVEL BERIKUTNYA';
+                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA LEVEL ' + (this.level + 1) + ' (' + rewardText + ')';
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({
@@ -839,7 +844,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
                     if (sectorLabelEl) sectorLabelEl.textContent = 'Level ' + String(this.level).padStart(2, '0') + ' • Game ' + this.stage + '/5 Selesai';
                     if (titleEl) titleEl.textContent = (this.localeCfg && this.localeCfg.titleStageClear) ? this.localeCfg.titleStageClear : ('GAME ' + this.stage + '/5 SELESAI!');
                     if (progressEl) progressEl.textContent = this.stage + ' / 5 Game';
-                    if (btnNextEl) btnNextEl.textContent = (this.localeCfg && this.localeCfg.btnNextStage) ? this.localeCfg.btnNextStage : 'LANJUT KE GAME BERIKUTNYA';
+                    if (btnClaimEl) btnClaimEl.textContent = '📺 NONTON IKLAN & BUKA GAME ' + (this.stage + 1) + '/5 (' + rewardText + ')';
 
                     if (window.FlutterBridge) {
                       window.FlutterBridge.postMessage(JSON.stringify({
@@ -948,7 +953,6 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         const bonusEl = document.getElementById('clear-bonus');
         const btnClaimEl = document.getElementById('btn-claim-reward');
         const titleClearEl = document.getElementById('clear-title');
-        const btnSkipEl = document.getElementById('btn-next-level');
         const btnRetryEl = document.getElementById('btn-retry');
         const startDescEl = document.querySelector('#screen-start .desc-text');
         const startBtnEl = document.getElementById('btn-start');
@@ -956,7 +960,6 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         if (bonusEl && cfg.rewardText) bonusEl.textContent = cfg.rewardText;
         if (btnClaimEl && cfg.btnClaimText) btnClaimEl.textContent = cfg.btnClaimText;
         if (titleClearEl && cfg.titleClear) titleClearEl.textContent = cfg.titleClear;
-        if (btnSkipEl && cfg.btnSkip) btnSkipEl.textContent = cfg.btnSkip;
         if (btnRetryEl && cfg.btnRetry) btnRetryEl.textContent = cfg.btnRetry;
         if (startDescEl && cfg.startDesc) startDescEl.textContent = cfg.startDesc;
         if (startBtnEl && cfg.startBtn) startBtnEl.textContent = cfg.startBtn;

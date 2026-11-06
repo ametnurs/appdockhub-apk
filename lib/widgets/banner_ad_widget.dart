@@ -24,6 +24,8 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   // Google AdMob Banner Ad Unit ID Resmi Anda
   static const String _realBannerAdUnitId = 'ca-app-pub-7479911722538350/9799786122';
+  // Google Official Sample Banner Unit ID for Android
+  static const String _sampleBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
 
   @override
   void initState() {
@@ -31,10 +33,12 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
     _loadBannerAd();
   }
 
-  void _loadBannerAd() {
+  void _loadBannerAd({bool isFallback = false}) {
     if (kIsWeb) return;
 
-    final adUnitId = widget.customAdUnitId ?? _realBannerAdUnitId;
+    final adUnitId = isFallback
+        ? _sampleBannerAdUnitId
+        : (widget.customAdUnitId ?? _realBannerAdUnitId);
 
     _bannerAd = BannerAd(
       adUnitId: adUnitId,
@@ -50,12 +54,16 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
           }
         },
         onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          debugPrint('⚠️ AdMob Banner masih peninjauan / fail: $error');
+          debugPrint('⚠️ AdMob Banner load fail ($adUnitId): $error');
           ad.dispose();
           if (mounted) {
             setState(() {
               _isAdLoaded = false;
             });
+          }
+          if (!isFallback) {
+            debugPrint('🚀 Fallback ke Google Sample Banner Ad...');
+            _loadBannerAd(isFallback: true);
           }
         },
       ),

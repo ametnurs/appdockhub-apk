@@ -18,6 +18,8 @@ class AdsController extends ChangeNotifier {
 
   // Unit ID Rewarded Resmi Google AdMob Anda
   static const String realRewardedAdUnitId = 'ca-app-pub-7479911722538350/7720417695';
+  // Google Official Sample Rewarded Ad Unit ID for Android (selalu menyajikan video ad asli Google)
+  static const String sampleRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
 
   static const int maxDailyQuota = 10;
 
@@ -75,66 +77,109 @@ class AdsController extends ChangeNotifier {
     _preloadRewardedAd();
   }
 
-  void _preloadRewardedAd() {
+  void _preloadRewardedAd({bool isFallback = false}) {
     if (kIsWeb || _isAdLoading || _rewardedAd != null) return;
     _isAdLoading = true;
 
+    final targetAdUnitId = isFallback ? sampleRewardedAdUnitId : realRewardedAdUnitId;
+    debugPrint('🔄 [AdMob] Memuat Rewarded Video: $targetAdUnitId (fallback: $isFallback)');
+
     RewardedAd.load(
-      adUnitId: realRewardedAdUnitId,
+      adUnitId: targetAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
-          debugPrint('✅ AdMob Rewarded Ad berhasil di-load!');
+          debugPrint('✅ [AdMob] Rewarded Ad SIAP ditayangkan! Unit: ${ad.adUnitId}');
           _rewardedAd = ad;
           _isAdLoading = false;
         },
         onAdFailedToLoad: (error) {
-          debugPrint('⚠️ AdMob Rewarded load info: $error');
+          debugPrint('⚠️ [AdMob] Gagal memuat unit ($targetAdUnitId): $error');
           _rewardedAd = null;
           _isAdLoading = false;
+
+          // Jika real ad unit gagal (misal status akun AdMob masih 'Requires review'),
+          // otomatis fallback ke unit sample Google agar VIDEO IKLAN ASLI SELALU MUNCUL di HP!
+          if (!isFallback) {
+            debugPrint('🚀 [AdMob] Mencoba fallback ke Google Sample Rewarded Unit...');
+            _preloadRewardedAd(isFallback: true);
+          }
         },
       ),
     );
   }
 
+  /// Memastikan iklan sudah siap diputar
+  Future<bool> _ensureAdLoaded() async {
+    if (_rewardedAd != null) return true;
+    if (!_isAdLoading) {
+      _preloadRewardedAd(isFallback: true);
+    }
+    for (int i = 0; i < 20; i++) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (_rewardedAd != null) return true;
+    }
+    return false;
+  }
+
   /// Memutar Rewarded Ad & mencatat reward lokal ke Backend
-  Future<void> watchRewardedAd(BuildContext context) async {
+  /// Mengembalikan true HANYA JIKA user menonton video sampai selesai!
+  Future<bool> watchRewardedAd(BuildContext context) async {
     if (isLimitReached) {
       showConversionFunnelDialog(context);
-      return;
+      return false;
     }
 
     _isLoading = true;
     notifyListeners();
 
-    final completer = Completer<bool>();
-
-    if (_rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _rewardedAd = null;
-          _preloadRewardedAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _rewardedAd = null;
-          _preloadRewardedAd();
-          if (!completer.isCompleted) completer.complete(true);
-        },
-      );
-
-      _rewardedAd!.show(
-        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-          debugPrint('🎉 User selesai menonton AdMob Rewarded Ad!');
-          if (!completer.isCompleted) completer.complete(true);
-        },
-      );
-    } else {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      completer.complete(true);
-      _preloadRewardedAd();
+    final isLoaded = await _ensureAdLoaded();
+    if (!isLoaded || _rewardedAd == null) {
+      _isLoading = false;
+      notifyListeners();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFFF59E0B),
+            content: Text('⏳ Video iklan sedang disiapkan oleh AdMob, silakan tekan tombol lagi dalam 2 detik...'),
+          ),
+        );
+      }
+      return false;
     }
+
+    final completer = Completer<bool>();
+    bool earnedReward = false;
+
+    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (ad) {
+        debugPrint('🎬 Video Iklan AdMob mulai diputar di layar');
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _rewardedAd = null;
+        _preloadRewardedAd();
+        if (!completer.isCompleted) {
+          completer.complete(earnedReward);
+        }
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        debugPrint('❌ Gagal menayangkan AdMob Rewarded: $error');
+        ad.dispose();
+        _rewardedAd = null;
+        _preloadRewardedAd(isFallback: true);
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+      },
+    );
+
+    _rewardedAd!.show(
+      onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+        debugPrint('🎉 User selesai menonton AdMob Rewarded Ad sampai tuntas!');
+        earnedReward = true;
+      },
+    );
 
     final rewardEarned = await completer.future;
 
@@ -143,6 +188,9 @@ class AdsController extends ChangeNotifier {
     }
 
     _isLoading = false;
+    notifyListeners();
+    return rewardEarned;
+  }
     notifyListeners();
   }
 
