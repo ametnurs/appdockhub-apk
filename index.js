@@ -455,6 +455,8 @@ async function handleOfferwallPostback(request, env, url) {
     params.get('user_id') ||
     params.get('aff_sub4') ||
     params.get('subid') ||
+    params.get('pub_click_id') ||
+    params.get('pub_sub_id') ||
     params.get('var') ||
     params.get('ymid') ||
     params.get('tracking_id') ||

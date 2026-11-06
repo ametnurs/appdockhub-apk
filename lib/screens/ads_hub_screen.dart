@@ -247,13 +247,14 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
     ),
     OfferwallProviderItem(
       id: 'quest_special',
-      name: 'Misi Spesial Operator',
+      name: 'Misi Spesial Operator (Server 5)',
       badge: '🎯 BONUS TINGGI',
       subtitle: 'Tantangan eksklusif sesuai perangkat & jaringan seluler Anda.',
       rewardRange: 'Rp 500 - Rp 120.000 / Misi',
       gradientColors: [Color(0xFF059669), Color(0xFF10B981)],
       icon: Icons.rocket_launch_rounded,
-      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
+      // Mobidea Smartlink Resmi Anda (sl=6169576-d57f7)
+      baseUrl: 'https://www.avoidthecroud.help/?sl=6169576-d57f7&pub_click_id={USER_ID}&site=cyber_orbit&pub_sub_id={USER_ID}',
     ),
   ];
 
