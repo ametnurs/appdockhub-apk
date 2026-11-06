@@ -6,11 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 
 /// AdsController: State management traffic retention, limit 10 iklan harian,
-/// dan otomatisasi konversi mata uang dinamis sesuai negara pengguna (IDR, USD, EUR, MYR, dll).
+/// dan Smart Rewarded Ad Engine:
+/// 1. Mencoba memutar Real AdMob Rewarded Ad (jika akun AdMob sudah disetujui).
+/// 2. Jika AdMob belum ready / belum ada di Play Store, otomatis menayangkan
+///    Full-Screen Rewarded Interstitial Timer (15 detik) dari jaringan aktif Anda
+///    (Monetag / Adsterra / Mobidea) sehingga Anda tetap menghasilkan uang nyata!
 class AdsController extends ChangeNotifier {
   final String backendBaseUrl;
 
@@ -18,8 +23,17 @@ class AdsController extends ChangeNotifier {
 
   // Unit ID Rewarded Resmi Google AdMob Anda
   static const String realRewardedAdUnitId = 'ca-app-pub-7479911722538350/7720417695';
-  // Google Official Sample Rewarded Ad Unit ID for Android (selalu menyajikan video ad asli Google)
-  static const String sampleRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+
+  // Daftar URL Monetisasi Aktif Anda (Tanpa perlu Play Store!)
+  // Bergantian otomatis setiap kali pemain menonton iklan naik game/level
+  static const List<String> activeRewardedUrls = [
+    // 1. Monetag Direct Link Resmi Anda
+    'https://uplcm.com/4/12204291?var={USER_ID}',
+    // 2. Adsterra Smartlink Resmi Anda
+    'https://asiafilm.org/4/86ef29736adda09bc43e293a1e401d5e?subid={USER_ID}',
+    // 3. Mobidea Smartlink Resmi Anda
+    'https://www.avoidthecroud.help/?sl=6169576-d57f7&pub_click_id={USER_ID}&site=cyber_orbit&pub_sub_id={USER_ID}',
+  ];
 
   static const int maxDailyQuota = 10;
 
@@ -33,6 +47,7 @@ class AdsController extends ChangeNotifier {
   double _balanceAds = 0.0;
   bool _isLoading = false;
   bool _isLimitReached = false;
+  int _urlRotationIndex = 0;
 
   RewardedAd? _rewardedAd;
   bool _isAdLoading = false;
@@ -45,7 +60,7 @@ class AdsController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLimitReached => _isLimitReached || _adsWatchedToday >= maxDailyQuota;
 
-  /// Nilai reward per 1 video iklan berdasarkan negara pengguna
+  /// Nilai reward per 1 video iklan berdasarkan mata uang (Default IDR Rp 10)
   double get rewardPerAd => CurrencyService.adReward;
 
   /// Inisialisasi token perangkat & sinkronisasi data lokal
@@ -74,56 +89,36 @@ class AdsController extends ChangeNotifier {
     _isLimitReached = _adsWatchedToday >= maxDailyQuota;
     notifyListeners();
 
-    _preloadRewardedAd();
+    _preloadRealAdMob();
   }
 
-  void _preloadRewardedAd({bool isFallback = false}) {
+  /// Mencoba memuat unit AdMob asli Anda di latar belakang
+  void _preloadRealAdMob() {
     if (kIsWeb || _isAdLoading || _rewardedAd != null) return;
     _isAdLoading = true;
 
-    final targetAdUnitId = isFallback ? sampleRewardedAdUnitId : realRewardedAdUnitId;
-    debugPrint('🔄 [AdMob] Memuat Rewarded Video: $targetAdUnitId (fallback: $isFallback)');
-
     RewardedAd.load(
-      adUnitId: targetAdUnitId,
+      adUnitId: realRewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
-          debugPrint('✅ [AdMob] Rewarded Ad SIAP ditayangkan! Unit: ${ad.adUnitId}');
+          debugPrint('✅ [AdMob] Real Rewarded Ad SIAP ditayangkan!');
           _rewardedAd = ad;
           _isAdLoading = false;
         },
         onAdFailedToLoad: (error) {
-          debugPrint('⚠️ [AdMob] Gagal memuat unit ($targetAdUnitId): $error');
+          debugPrint('ℹ️ [AdMob] Real unit belum aktif, siap gunakan Smart Rewarded Monetag/Adsterra.');
           _rewardedAd = null;
           _isAdLoading = false;
-
-          // Jika real ad unit gagal (misal status akun AdMob masih 'Requires review'),
-          // otomatis fallback ke unit sample Google agar VIDEO IKLAN ASLI SELALU MUNCUL di HP!
-          if (!isFallback) {
-            debugPrint('🚀 [AdMob] Mencoba fallback ke Google Sample Rewarded Unit...');
-            _preloadRewardedAd(isFallback: true);
-          }
         },
       ),
     );
   }
 
-  /// Memastikan iklan sudah siap diputar
-  Future<bool> _ensureAdLoaded() async {
-    if (_rewardedAd != null) return true;
-    if (!_isAdLoading) {
-      _preloadRewardedAd(isFallback: true);
-    }
-    for (int i = 0; i < 20; i++) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (_rewardedAd != null) return true;
-    }
-    return false;
-  }
-
-  /// Memutar Rewarded Ad & mencatat reward lokal ke Backend
-  /// Mengembalikan true HANYA JIKA user menonton video sampai selesai!
+  /// Memutar Rewarded Ad:
+  /// - Jika Real AdMob tersedia, putar Real AdMob.
+  /// - Jika Real AdMob belum tersedia (karena belum ada URL Play Store), putar
+  ///   Smart Rewarded Ad Player 15 Detik (Monetag / Adsterra / Mobidea) yang menghasilkan uang nyata!
   Future<bool> watchRewardedAd(BuildContext context) async {
     if (_isLoading) return false;
     if (isLimitReached) {
@@ -134,94 +129,93 @@ class AdsController extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final isLoaded = await _ensureAdLoaded();
-    if (!isLoaded || _rewardedAd == null) {
-      _isLoading = false;
-      notifyListeners();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFFF59E0B),
-            content: Text('⏳ Video iklan sedang disiapkan oleh AdMob, silakan tekan tombol lagi dalam 2 detik...'),
-          ),
-        );
+    // 1. Jika Real AdMob sudah aktif & ter-load, tayangkan Real AdMob
+    if (_rewardedAd != null) {
+      final completer = Completer<bool>();
+      bool earnedReward = false;
+      bool rewardProcessed = false;
+
+      Future<void> processRewardIfNeeded() async {
+        if (rewardProcessed) return;
+        rewardProcessed = true;
+        await _syncRewardToBackend(context);
       }
-      return false;
-    }
 
-    final completer = Completer<bool>();
-    bool earnedReward = false;
-    bool rewardProcessed = false;
-
-    Future<void> processRewardIfNeeded() async {
-      if (rewardProcessed) return;
-      rewardProcessed = true;
-      await _syncRewardToBackend(context);
-    }
-
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (ad) {
-        debugPrint('🎬 Video Iklan AdMob mulai diputar di layar');
-      },
-      onAdDismissedFullScreenContent: (ad) async {
-        debugPrint('🎬 Video Iklan AdMob ditutup (earnedReward: $earnedReward).');
-        _rewardedAd = null;
-
-        // Tunggu 250ms untuk memastikan callback onUserEarnedReward dari SDK selesai masuk
-        if (!earnedReward) {
-          await Future.delayed(const Duration(milliseconds: 250));
-        }
-
-        if (earnedReward) {
-          await processRewardIfNeeded();
-        }
-
-        if (!completer.isCompleted) {
-          completer.complete(earnedReward);
-        }
-
-        // Dispose ad dan preload iklan berikutnya setelah transisi Activity selesai penuh (1.2 detik)
-        // untuk mencegah crash surface OpenGL di emulator Android
-        Future.delayed(const Duration(milliseconds: 1200), () {
+      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) async {
+          _rewardedAd = null;
+          if (!earnedReward) {
+            await Future.delayed(const Duration(milliseconds: 250));
+          }
+          if (earnedReward) {
+            await processRewardIfNeeded();
+          }
+          if (!completer.isCompleted) {
+            completer.complete(earnedReward);
+          }
+          Future.delayed(const Duration(milliseconds: 1200), () {
+            try {
+              ad.dispose();
+            } catch (_) {}
+            _preloadRealAdMob();
+          });
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
           try {
             ad.dispose();
-          } catch (e) {
-            debugPrint('Info dispose ad: $e');
+          } catch (_) {}
+          _rewardedAd = null;
+          if (!completer.isCompleted) {
+            completer.complete(false);
           }
-          _preloadRewardedAd();
-        });
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        debugPrint('❌ Gagal menayangkan AdMob Rewarded: $error');
-        try {
-          ad.dispose();
-        } catch (e) {
-          debugPrint('Info dispose fail ad: $e');
-        }
-        _rewardedAd = null;
-        _preloadRewardedAd(isFallback: true);
-        if (!completer.isCompleted) {
-          completer.complete(false);
-        }
-      },
-    );
+        },
+      );
 
-    _rewardedAd!.show(
-      onUserEarnedReward: (AdWithoutView ad, RewardItem reward) async {
-        debugPrint('🎉 User selesai menonton AdMob Rewarded Ad sampai tuntas!');
-        earnedReward = true;
-        await processRewardIfNeeded();
-        if (!completer.isCompleted) {
-          completer.complete(true);
-        }
-      },
-    );
+      _rewardedAd!.show(
+        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) async {
+          earnedReward = true;
+          await processRewardIfNeeded();
+          if (!completer.isCompleted) {
+            completer.complete(true);
+          }
+        },
+      );
 
-    final rewardEarned = await completer.future;
+      final result = await completer.future;
+      _isLoading = false;
+      notifyListeners();
+      return result;
+    }
 
+    // 2. Jika AdMob belum aktif (belum masuk Play Store), tayangkan Smart Rewarded Ad (Monetag / Adsterra / Mobidea)
     _isLoading = false;
     notifyListeners();
-    return rewardEarned;
+
+    if (!context.mounted) return false;
+
+    final userId = _pairToken.isNotEmpty ? _pairToken : 'guest_user';
+    final rawUrl = activeRewardedUrls[_urlRotationIndex % activeRewardedUrls.length];
+    _urlRotationIndex++;
+    final adUrl = rawUrl.replaceAll('{USER_ID}', Uri.encodeComponent(userId));
+
+    final bool? completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _SmartRewardedAdScreen(
+          adUrl: adUrl,
+          countdownSeconds: 15,
+        ),
+      ),
+    );
+
+    if (completed == true) {
+      if (context.mounted) {
+        await _syncRewardToBackend(context);
+      }
+      return true;
+    }
+
+    return false;
   }
 
   /// Sinkronisasi Saldo Lokal & Cloudflare Worker Secara Instan
@@ -297,7 +291,6 @@ class AdsController extends ChangeNotifier {
     final cur = CurrencyService.current;
     final t1Text = CurrencyService.format(cur.tier1Commission);
     final t2Text = CurrencyService.format(cur.tier2Commission);
-    final dailyCap = CurrencyService.format(cur.adReward * maxDailyQuota);
 
     showDialog(
       context: context,
@@ -323,14 +316,14 @@ class AdsController extends ChangeNotifier {
                 const SizedBox(height: 16),
 
                 const Text(
-                  'Daily 10-Ads Limit Reached!',
+                  'Batas Iklan Harian Tercapai!',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 8),
 
                 Text(
-                  'Why cap yourself at $dailyCap/day? Unlock unlimited earnings ($t1Text per direct sale + $t2Text team bonus) via our 2-Tier Partner Program!',
+                  'Ingin penghasilan tanpa batas harian? Dapatkan komisi $t1Text per penjualan langsung + $t2Text bonus tim lewat Program Partner 2-Tier!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
                 ),
@@ -351,7 +344,7 @@ class AdsController extends ChangeNotifier {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Tier 1: Direct Commission 30%\n($t1Text per license sold)',
+                              'Tier 1: Komisi Langsung 30%\n($t1Text per lisensi terjual)',
                               style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -364,7 +357,7 @@ class AdsController extends ChangeNotifier {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Tier 2: Team Passive Bonus 5%\n($t2Text from team member sales)',
+                              'Tier 2: Bonus Pasif Tim 5%\n($t2Text dari penjualan tim)',
                               style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -394,7 +387,7 @@ class AdsController extends ChangeNotifier {
                         Icon(Icons.send_rounded, color: Colors.white, size: 18),
                         SizedBox(width: 8),
                         Text(
-                          'Join Affiliate on Telegram',
+                          'Gabung Afiliasi di Telegram',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],
@@ -405,13 +398,210 @@ class AdsController extends ChangeNotifier {
 
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Close', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Layar Full-Screen Rewarded Ad (15 Detik Countdown)
+/// Menayangkan iklan nyata dari Monetag / Adsterra / Mobidea tanpa membutuhkan URL Play Store!
+class _SmartRewardedAdScreen extends StatefulWidget {
+  final String adUrl;
+  final int countdownSeconds;
+
+  const _SmartRewardedAdScreen({
+    Key? key,
+    required this.adUrl,
+    this.countdownSeconds = 15,
+  }) : super(key: key);
+
+  @override
+  State<_SmartRewardedAdScreen> createState() => _SmartRewardedAdScreenState();
+}
+
+class _SmartRewardedAdScreenState extends State<_SmartRewardedAdScreen> {
+  late final WebViewController _webController;
+  Timer? _timer;
+  late int _remainingSeconds;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _remainingSeconds = widget.countdownSeconds;
+
+    _webController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF070B14))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() => _isLoading = true);
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.adUrl));
+
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDone = _remainingSeconds <= 0;
+    final double progress = (widget.countdownSeconds - _remainingSeconds) / widget.countdownSeconds;
+
+    return PopScope(
+      canPop: isDone,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070B14),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // TOP BAR REWARDED TIMER (Persis seperti Rewarded Video Player)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0B1120),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9900).withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFF9900).withOpacity(0.4)),
+                          ),
+                          child: const Text(
+                            'SPONSORED',
+                            style: TextStyle(
+                              color: Color(0xFFFF9900),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          isDone
+                              ? '✅ Reward Siap Diklaim!'
+                              : 'Tunggu $_remainingSeconds detik untuk lanjut...',
+                          style: TextStyle(
+                            color: isDone ? const Color(0xFF10B981) : Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Tombol X / Klaim & Lanjut (Hanya aktif setelah 15 detik selesai)
+                    if (isDone)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(true),
+                        icon: const Icon(Icons.check_circle_rounded, size: 16),
+                        label: const Text(
+                          'LANJUTKAN ➔',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.08),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Text(
+                          '$_remainingSeconds',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Progress Bar Timer
+              LinearProgressIndicator(
+                value: progress,
+                minHeight: 3,
+                backgroundColor: Colors.white10,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDone ? const Color(0xFF10B981) : const Color(0xFFFF9900),
+                ),
+              ),
+
+              // Area Tayangan Iklan Aktif (Monetag / Adsterra / Mobidea)
+              Expanded(
+                child: Stack(
+                  children: [
+                    WebViewWidget(controller: _webController),
+                    if (_isLoading)
+                      const Center(
+                        child: CircularProgressIndicator(color: Color(0xFF00F0FF)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
