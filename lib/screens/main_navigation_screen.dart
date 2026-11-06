@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../controllers/ads_controller.dart';
+import '../game/cyber_orbit_game.dart';
 import '../widgets/banner_ad_widget.dart';
 import 'activation_screen.dart';
-import 'ads_hub_screen.dart';
 import 'affiliate_screen.dart';
 import 'wallet_screen.dart';
 
 /// MainNavigationScreen: Modern Floating Dock Navigation Bar
+/// Menampilkan Game Orisinal "Cyber Orbit" sebagai Halaman Utama.
 /// Dilengkapi efek kaca (Glassmorphism), sticky bottom banner ads yang terbungkus elegan,
 /// dan transisi tab yang halus.
 class MainNavigationScreen extends StatefulWidget {
@@ -27,7 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const orangeStart = Color(0xFFFF5E00);
 
     final List<Widget> screens = [
-      AdsHubScreen(adsController: widget.adsController),
+      CyberOrbitGameScreen(adsController: widget.adsController), // HALAMAN UTAMA GAME ORISINAL
       ActivationScreen(backendBaseUrl: widget.adsController.backendBaseUrl),
       AffiliateScreen(pairToken: widget.adsController.pairToken),
       WalletScreen(adsBalance: widget.adsController.balanceAds),
@@ -65,7 +66,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(0, Icons.play_circle_fill_rounded, 'Cuan Ads'),
+                  _buildNavItem(0, Icons.gamepad_rounded, 'Cyber Orbit'),
                   _buildNavItem(1, Icons.vpn_key_rounded, 'Software HWID'),
                   _buildNavItem(2, Icons.people_alt_rounded, 'Afiliasi 2-Tier'),
                   _buildNavItem(3, Icons.account_balance_wallet_rounded, 'Dompet'),
