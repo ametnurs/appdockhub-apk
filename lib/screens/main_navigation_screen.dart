@@ -5,6 +5,7 @@ import '../services/locale_service.dart';
 import '../widgets/banner_ad_widget.dart';
 import 'ads_hub_screen.dart';
 import 'affiliate_screen.dart';
+import 'store_screen.dart';
 import 'wallet_screen.dart';
 
 /// MainNavigationScreen: Modern Floating Dock Navigation Bar
@@ -28,6 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final List<Widget> screens = [
       CyberOrbitGameScreen(adsController: widget.adsController),
       AdsHubScreen(adsController: widget.adsController),
+      StoreScreen(pairToken: widget.adsController.pairToken),
       AffiliateScreen(pairToken: widget.adsController.pairToken),
       WalletScreen(adsBalance: widget.adsController.balanceAds),
     ];
@@ -58,16 +60,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: const BannerAdWidget(),
             ),
 
-            // MODERN FLOATING DOCK BOTTOM NAVIGATION
+            // MODERN FLOATING DOCK BOTTOM NAVIGATION (5 MENU LENGKAP)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.gamepad_rounded, LocaleService.navGame),
                   _buildNavItem(1, Icons.live_tv_rounded, LocaleService.navOfferwall),
-                  _buildNavItem(2, Icons.people_alt_rounded, LocaleService.navAffiliate),
-                  _buildNavItem(3, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
+                  _buildNavItem(2, Icons.shopping_bag_rounded, LocaleService.navStore),
+                  _buildNavItem(3, Icons.people_alt_rounded, LocaleService.navAffiliate),
+                  _buildNavItem(4, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
                 ],
               ),
             ),
@@ -82,14 +85,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     const orangeColor = Color(0xFFFF5E00);
 
     return InkWell(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       onTap: () => setState(() => _currentIndex = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? orangeColor.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: isSelected ? Border.all(color: orangeColor.withOpacity(0.35)) : null,
         ),
         child: Column(
@@ -97,7 +100,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           children: [
             Icon(
               icon,
-              size: 22,
+              size: 20,
               color: isSelected ? orangeColor : const Color(0xFF64748B),
             ),
             const SizedBox(height: 3),
@@ -105,7 +108,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : const Color(0xFF64748B),
-                fontSize: 10,
+                fontSize: 9.5,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
