@@ -125,6 +125,7 @@ class AdsController extends ChangeNotifier {
   /// Memutar Rewarded Ad & mencatat reward lokal ke Backend
   /// Mengembalikan true HANYA JIKA user menonton video sampai selesai!
   Future<bool> watchRewardedAd(BuildContext context) async {
+    if (_isLoading) return false;
     if (isLimitReached) {
       showConversionFunnelDialog(context);
       return false;
@@ -150,19 +151,36 @@ class AdsController extends ChangeNotifier {
 
     final completer = Completer<bool>();
     bool earnedReward = false;
+    bool rewardProcessed = false;
+
+    Future<void> processRewardIfNeeded() async {
+      if (rewardProcessed) return;
+      rewardProcessed = true;
+      await _syncRewardToBackend(context);
+    }
 
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
         debugPrint('🎬 Video Iklan AdMob mulai diputar di layar');
       },
-      onAdDismissedFullScreenContent: (ad) {
-        debugPrint('🎬 Video Iklan AdMob ditutup.');
+      onAdDismissedFullScreenContent: (ad) async {
+        debugPrint('🎬 Video Iklan AdMob ditutup (earnedReward: $earnedReward).');
         try {
           ad.dispose();
         } catch (e) {
           debugPrint('Info dispose ad: $e');
         }
         _rewardedAd = null;
+
+        // Tunggu 250ms untuk memastikan callback onUserEarnedReward dari SDK selesai masuk
+        if (!earnedReward) {
+          await Future.delayed(const Duration(milliseconds: 250));
+        }
+
+        if (earnedReward) {
+          await processRewardIfNeeded();
+        }
+
         if (!completer.isCompleted) {
           completer.complete(earnedReward);
         }
@@ -186,17 +204,17 @@ class AdsController extends ChangeNotifier {
     );
 
     _rewardedAd!.show(
-      onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+      onUserEarnedReward: (AdWithoutView ad, RewardItem reward) async {
         debugPrint('🎉 User selesai menonton AdMob Rewarded Ad sampai tuntas!');
         earnedReward = true;
+        await processRewardIfNeeded();
+        if (!completer.isCompleted) {
+          completer.complete(true);
+        }
       },
     );
 
     final rewardEarned = await completer.future;
-
-    if (rewardEarned) {
-      await _syncRewardToBackend(context);
-    }
 
     _isLoading = false;
     notifyListeners();

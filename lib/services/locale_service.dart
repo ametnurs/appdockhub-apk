@@ -2,26 +2,13 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 /// LocaleService: Deteksi otomatis bahasa perangkat pengguna
-/// Menyediakan teks dwibahasa (Bahasa Indonesia & International English) secara instan.
+/// Default ke Bahasa Indonesia (sesuai ekosistem IDR Rupiah).
 class LocaleService {
   static bool? _isIndonesian;
 
-  /// Cek apakah pengguna menggunakan Bahasa Indonesia (berdasarkan bahasa atau negara sistem HP)
+  /// Gunakan Bahasa Indonesia secara default
   static bool get isIndonesian {
-    if (_isIndonesian != null) return _isIndonesian!;
-
-    try {
-      final locale = PlatformDispatcher.instance.locale;
-      final lang = locale.languageCode.toLowerCase();
-      final country = locale.countryCode?.toUpperCase();
-
-      _isIndonesian = (lang == 'id' || country == 'ID');
-      debugPrint('🌐 Deteksi Bahasa Pengguna: lang=$lang, country=$country, isIndonesian=$_isIndonesian');
-    } catch (e) {
-      _isIndonesian = false; // Default ke English untuk pengguna internasional
-    }
-
-    return _isIndonesian!;
+    return true;
   }
 
   // =========================================================================

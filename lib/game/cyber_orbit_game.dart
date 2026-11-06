@@ -98,13 +98,21 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
           if (success) {
             final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
             if (mounted) {
-              try {
-                await _webViewController.runJavaScript(
-                  "if(window.onRewardSuccess){window.onRewardSuccess('$rewardText');}"
-                );
-              } catch (e) {
-                debugPrint('Error running onRewardSuccess JS: $e');
+              setState(() {});
+              // Jalankan transisi ke game berikutnya segera & ulangi setelah Activity fokus kembali
+              Future<void> triggerNextStage() async {
+                if (!mounted) return;
+                try {
+                  await _webViewController.runJavaScript(
+                    "if(window.onRewardSuccess){window.onRewardSuccess('$rewardText');}"
+                  );
+                } catch (e) {
+                  debugPrint('Error running onRewardSuccess JS: $e');
+                }
               }
+
+              await triggerNextStage();
+              Future.delayed(const Duration(milliseconds: 350), triggerNextStage);
             }
           } else {
             if (mounted) {

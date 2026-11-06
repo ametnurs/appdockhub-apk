@@ -742,21 +742,6 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
             });
           }
 
-          // Bridge: Klaim reward nonton video (1 game = 1 video iklan)
-          const claimBtn = document.getElementById('btn-claim-reward');
-          if (claimBtn) {
-            claimBtn.addEventListener('click', (e) => {
-              if (e) e.stopPropagation();
-              if (window.FlutterBridge) {
-                window.FlutterBridge.postMessage(JSON.stringify({
-                  event: 'WATCH_AD',
-                  level: this.level,
-                  stage: this.stage
-                }));
-              }
-            });
-          }
-
           const soundBtn = document.getElementById('btn-sound');
           if (soundBtn) {
             soundBtn.addEventListener('click', () => {
@@ -768,6 +753,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         }
 
         advanceNext() {
+          if (this.state !== 'LEVEL_CLEAR') return;
           if (this.stage < this.maxStages) {
             // Lanjut ke game berikutnya di level yang sama (misal 2/5, 3/5, ...)
             this.stage++;
@@ -988,6 +974,10 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       };
 
       window.claimReward = function() {
+        if (window._isClaimingAd) return;
+        window._isClaimingAd = true;
+        setTimeout(() => { window._isClaimingAd = false; }, 1500);
+
         const game = initGame();
         if (window.FlutterBridge) {
           const lvl = game ? game.level : 1;
@@ -1018,8 +1008,10 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
 
       // Callback dari Flutter saat Reward berhasil masuk
       window.onRewardSuccess = function(amountText) {
-        if (window.gameInstance) {
-          window.gameInstance.advanceNext();
+        window._isClaimingAd = false;
+        const game = initGame();
+        if (game) {
+          game.advanceNext();
         }
       };
 
