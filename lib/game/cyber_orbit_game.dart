@@ -898,32 +898,6 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
             ),
           ),
 
-          // Indikator Kuota Iklan Hari Ini (Maks 10)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: controller.isLimitReached
-                  ? const Color(0xFF7F1D1D)
-                  : const Color(0xFF0284C7).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: controller.isLimitReached
-                    ? Colors.redAccent
-                    : const Color(0xFF38BDF8).withOpacity(0.4),
-              ),
-            ),
-            child: Text(
-              controller.isLimitReached
-                  ? LocaleService.adsLimitReached
-                  : LocaleService.adsQuota(controller.adsWatchedToday, AdsController.maxDailyQuota),
-              style: TextStyle(
-                color: controller.isLimitReached ? Colors.amber : const Color(0xFF38BDF8),
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-
           // Shortcut Pairing Telegram
           InkWell(
             borderRadius: BorderRadius.circular(10),

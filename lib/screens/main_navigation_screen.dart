@@ -3,13 +3,11 @@ import '../controllers/ads_controller.dart';
 import '../game/cyber_orbit_game.dart';
 import '../services/locale_service.dart';
 import '../widgets/banner_ad_widget.dart';
-import 'activation_screen.dart';
 import 'affiliate_screen.dart';
 import 'wallet_screen.dart';
 
 /// MainNavigationScreen: Modern Floating Dock Navigation Bar
 /// Menampilkan Game Orisinal "Cyber Orbit" sebagai Halaman Utama.
-/// Navigasi otomatis dwibahasa (Bahasa Indonesia / English).
 class MainNavigationScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -28,7 +26,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> screens = [
       CyberOrbitGameScreen(adsController: widget.adsController),
-      ActivationScreen(backendBaseUrl: widget.adsController.backendBaseUrl),
       AffiliateScreen(pairToken: widget.adsController.pairToken),
       WalletScreen(adsBalance: widget.adsController.balanceAds),
     ];
@@ -59,16 +56,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: const BannerAdWidget(),
             ),
 
-            // MODERN FLOATING DOCK BOTTOM NAVIGATION (DWIBAHASA OTOMATIS)
+            // MODERN FLOATING DOCK BOTTOM NAVIGATION
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, Icons.gamepad_rounded, LocaleService.navGame),
-                  _buildNavItem(1, Icons.vpn_key_rounded, LocaleService.navHwid),
-                  _buildNavItem(2, Icons.people_alt_rounded, LocaleService.navAffiliate),
-                  _buildNavItem(3, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
+                  _buildNavItem(1, Icons.people_alt_rounded, LocaleService.navAffiliate),
+                  _buildNavItem(2, Icons.account_balance_wallet_rounded, LocaleService.navWallet),
                 ],
               ),
             ),

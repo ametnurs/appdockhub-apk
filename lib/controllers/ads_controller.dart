@@ -252,7 +252,7 @@ class AdsController extends ChangeNotifier {
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
             content: Text(
-              '🎉 Reward ${CurrencyService.format(rewardAmt)} berhasil masuk! Sisa kuota: $remainingQuota.',
+              '🎉 Reward ${CurrencyService.format(rewardAmt)} berhasil masuk ke saldo Anda!',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
