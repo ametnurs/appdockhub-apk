@@ -1,0 +1,14 @@
+name = "appdockhub-backend"
+main = "index.js"
+compatibility_date = "2024-04-01"
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "appdockhub_db"
+database_id = "YOUR_D1_DATABASE_ID" # Ganti dengan ID hasil 'wrangler d1 create appdockhub_db'
+
+# KV Namespace Fallback (Opsional jika masih ada aset KV)
+# [[kv_namespaces]]
+# binding = "LICENSE_KV"
+# id = "YOUR_KV_NAMESPACE_ID"
