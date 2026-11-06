@@ -191,8 +191,6 @@ class AdsController extends ChangeNotifier {
     notifyListeners();
     return rewardEarned;
   }
-    notifyListeners();
-  }
 
   /// Sinkronisasi Saldo ke Cloudflare Worker
   Future<void> _syncRewardToBackend(BuildContext context) async {
