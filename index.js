@@ -367,9 +367,11 @@ async function handleAdsReward(request, env) {
     });
   }
 
-  // Tambahkan reward & naikkan counter iklan
+  // Tambahkan reward dinamis (Iklan 1-5 maks Rp 50, Iklan 6-60 antara Rp 2 - Rp 30, target 60 iklan = Rp 600/hari)
   watchedToday += 1;
-  const newBalanceAds = (user.balance_ads || 0) + rewardToAdd;
+  const maxAllowedPerAd = watchedToday <= 5 ? 50 : 30;
+  const safeReward = Math.max(2, Math.min(maxAllowedPerAd, Math.round(rewardToAdd)));
+  const newBalanceAds = (user.balance_ads || 0) + safeReward;
 
   await env.DB.prepare(
     'UPDATE users SET ads_watched_today = ?, balance_ads = ?, last_ad_watch_date = ? WHERE app_pair_token = ?'
@@ -381,7 +383,7 @@ async function handleAdsReward(request, env) {
   // Notifikasi instan ke Telegram jika user sudah terhubung
   if (user.telegram_id && !user.telegram_id.startsWith('temp_')) {
     let notifyMsg = `📺 *REWARDED AD BERHASIL DITONTON!*\n\n` +
-      `💰 Saldo Bertambah: *+Rp ${rewardToAdd.toLocaleString('id-ID')}*\n` +
+      `💰 Saldo Bertambah: *+Rp ${safeReward.toLocaleString('id-ID')}*\n` +
       `🎯 Kuota Hari Ini: *${watchedToday}/${CONFIG.MAX_DAILY_ADS}*\n` +
       `💵 Total Saldo Iklan: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`;
 
@@ -398,11 +400,11 @@ async function handleAdsReward(request, env) {
     limitReached: isLimitNow,
     adsWatchedToday: watchedToday,
     remainingQuota: remaining,
-    rewardAdded: rewardToAdd,
+    rewardAdded: safeReward,
     currentBalanceAds: newBalanceAds,
     message: isLimitNow
       ? `Selamat! Kuota ${CONFIG.MAX_DAILY_ADS} iklan harian selesai ditonton.`
-      : `Iklan ke-${watchedToday} sukses. Sisa kuota hari ini: ${remaining} iklan.`
+      : `Iklan ke-${watchedToday} sukses (+Rp ${safeReward}). Sisa kuota hari ini: ${remaining} iklan.`
   });
 }
 

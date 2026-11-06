@@ -37,15 +37,21 @@ class AdsController extends ChangeNotifier {
   ];
 
   static const int maxDailyQuota = 60;
+  static const double maxDailyRewardIdr = 600.0;
+  // 5 Iklan Pertama Harian dibuat besar agar menarik user:
+  // Iklan 1 = Rp 50, Iklan 2 = Rp 20, Iklan 3 = Rp 40, Iklan 4 = Rp 25, Iklan 5 = Rp 30 (Total 5 awal = Rp 165)
+  static const List<int> initialBoostRewards = [50, 20, 40, 25, 30];
 
   static const String keyPairToken = 'app_pair_token';
   static const String keyWatchedCount = 'ads_watched_today';
   static const String keyLastDate = 'last_ad_watch_date';
   static const String keyBalance = 'local_ads_balance';
   static const String keyRotationTurn = 'ad_network_rotation_turn';
+  static const String keyDailyEarnedIdr = 'daily_earned_idr';
 
   String _pairToken = '';
   int _adsWatchedToday = 0;
+  double _dailyEarnedIdr = 0.0;
   double _balanceAds = 0.0;
   bool _isLoading = false;
   bool _isLimitReached = false;
@@ -62,8 +68,53 @@ class AdsController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLimitReached => _isLimitReached || _adsWatchedToday >= maxDailyQuota;
 
-  /// Nilai reward per 1 video iklan berdasarkan mata uang (Default IDR Rp 10)
+  /// Nilai reward rata-rata default (untuk kompatibilitas getter)
   double get rewardPerAd => CurrencyService.adReward;
+
+  /// Menghitung nominal reward dinamis untuk iklan berikutnya:
+  /// - Iklan ke-1 s/d ke-5: [Rp 50, Rp 20, Rp 40, Rp 25, Rp 30]
+  /// - Iklan ke-6 s/d ke-60: Random antara Rp 2 s/d Rp 30 dengan pengunci target
+  ///   sehingga total 60 iklan tepat menghasilkan Rp 600 / hari.
+  double _calculateDynamicNextReward() {
+    final int adNum = _adsWatchedToday + 1;
+    if (adNum >= 1 && adNum <= initialBoostRewards.length) {
+      return initialBoostRewards[adNum - 1].toDouble();
+    }
+
+    final int remAds = max(1, maxDailyQuota - adNum + 1);
+    final int remBudget = max(remAds * 2, (maxDailyRewardIdr - _dailyEarnedIdr).round());
+
+    if (remAds <= 1) {
+      return remBudget.clamp(2, 30).toDouble();
+    }
+
+    final int minSafe = max(2, remBudget - (remAds - 1) * 30);
+    final int maxSafe = min(30, remBudget - (remAds - 1) * 2);
+    if (minSafe >= maxSafe) {
+      return minSafe.toDouble();
+    }
+
+    final double avg = remBudget / remAds;
+    final int capMax = min(maxSafe, max(minSafe, (avg * 2.6).round()));
+    final rng = Random();
+    int val;
+    if (rng.nextDouble() < 0.20) {
+      val = minSafe + rng.nextInt(max(1, capMax - minSafe + 1));
+    } else {
+      final int midMax = min(capMax, max(minSafe, (avg * 1.6).round()));
+      val = minSafe + rng.nextInt(max(1, midMax - minSafe + 1));
+    }
+    return val.clamp(minSafe, maxSafe).toDouble();
+  }
+
+  /// Durasi tayangan iklan menyesuaikan besarnya nominal reward yang didapat:
+  /// Semakin besar reward yang keluar, durasi iklan sedikit lebih lama (10 - 20 detik).
+  int _getAdCountdownSecondsForReward(double rewardIdr) {
+    if (rewardIdr >= 30) return 20;
+    if (rewardIdr >= 15) return 16;
+    if (rewardIdr >= 7) return 13;
+    return 10;
+  }
 
   /// Inisialisasi token perangkat & sinkronisasi data lokal
   Future<void> initialize() async {
@@ -81,10 +132,13 @@ class AdsController extends ChangeNotifier {
 
     if (lastDate != todayStr) {
       _adsWatchedToday = 0;
+      _dailyEarnedIdr = 0.0;
       await prefs.setString(keyLastDate, todayStr);
       await prefs.setInt(keyWatchedCount, 0);
+      await prefs.setDouble(keyDailyEarnedIdr, 0.0);
     } else {
       _adsWatchedToday = prefs.getInt(keyWatchedCount) ?? 0;
+      _dailyEarnedIdr = prefs.getDouble(keyDailyEarnedIdr) ?? 0.0;
     }
 
     _balanceAds = prefs.getDouble(keyBalance) ?? 0.0;
@@ -163,6 +217,10 @@ class AdsController extends ChangeNotifier {
       return false;
     }
 
+    // Hitung nominal reward dinamis (Iklan 1-5 besar: 50, 20, 40, 25, 30; Iklan 6-60 random Rp 2 - Rp 30 dengan target 60 iklan = Rp 600)
+    final double plannedReward = _calculateDynamicNextReward();
+    final int dynamicDuration = _getAdCountdownSecondsForReward(plannedReward);
+
     // ROTASI SELANG-SELING TIAP 1 IKLAN (4 Jaringan Berbeda, Maks 60/Hari = 15 Tayangan/Jaringan):
     // Turn 0: Google AdMob (Jika sudah ready; jika belum ready langsung lompat ke Turn 1)
     // Turn 1: Monetag
@@ -182,7 +240,7 @@ class AdsController extends ChangeNotifier {
       Future<void> processRewardIfNeeded() async {
         if (rewardProcessed) return;
         rewardProcessed = true;
-        await _syncRewardToBackend(context);
+        await _syncRewardToBackend(context, plannedReward);
       }
 
       _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
@@ -254,14 +312,14 @@ class AdsController extends ChangeNotifier {
         fullscreenDialog: true,
         builder: (_) => _SmartRewardedAdScreen(
           adUrl: adUrl,
-          countdownSeconds: 15,
+          countdownSeconds: dynamicDuration,
         ),
       ),
     );
 
     if (completed == true) {
       if (context.mounted) {
-        await _syncRewardToBackend(context);
+        await _syncRewardToBackend(context, plannedReward);
       }
       return true;
     }
@@ -270,19 +328,20 @@ class AdsController extends ChangeNotifier {
   }
 
   /// Sinkronisasi Saldo Lokal & Cloudflare Worker Secara Instan
-  Future<void> _syncRewardToBackend(BuildContext context) async {
-    final rewardAmt = rewardPerAd;
+  Future<void> _syncRewardToBackend(BuildContext context, double rewardAmt) async {
     final currencyCode = CurrencyService.current.code;
 
     // 1. Update state lokal secara instan agar UI & Game langsung merespons tanpa jeda
     SecurityService.markAdFinished();
     _adsWatchedToday += 1;
+    _dailyEarnedIdr += rewardAmt;
     _balanceAds += rewardAmt;
-    _isLimitReached = _adsWatchedToday >= maxDailyQuota;
+    _isLimitReached = _adsWatchedToday >= maxDailyQuota || _dailyEarnedIdr >= maxDailyRewardIdr;
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(keyWatchedCount, _adsWatchedToday);
+      await prefs.setDouble(keyDailyEarnedIdr, _dailyEarnedIdr);
       await prefs.setDouble(keyBalance, _balanceAds);
     } catch (e) {
       debugPrint('Error saving prefs: $e');
