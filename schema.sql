@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_pair_token ON users(app_pair_token);
 CREATE INDEX IF NOT EXISTS idx_users_referrer ON users(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_users_last_ip ON users(last_ip);
+CREATE INDEX IF NOT EXISTS idx_users_ip_date ON users(last_ip, last_ad_watch_date);
 
 -- 2. TABEL LICENSES (Pengelolaan Lisensi Multi-Software Terikat HWID)
 CREATE TABLE IF NOT EXISTS licenses (

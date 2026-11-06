@@ -21,6 +21,9 @@ class SecurityService {
 
   static bool _isDialogShowing = false;
   static DateTime? _lastAdFinishedTime;
+  static bool? _cachedEmulatorResult;
+  static DateTime? _lastRemoteSecurityCheck;
+  static const int _remoteCacheMinutes = 15;
 
   /// Cooldown minimal 8 detik antar tayangan iklan agar AdNetwork tidak mendeteksi spam klik/bot
   static const int minAdCooldownSeconds = 8;
@@ -84,6 +87,7 @@ class SecurityService {
   /// Cek apakah aplikasi dijalankan di dalam Emulator / Virtual Phone / App Cloner / Parallel Space
   static Future<bool> isEmulatorOrVirtualPhone() async {
     if (kIsWeb || !Platform.isAndroid) return false;
+    if (_cachedEmulatorResult != null) return _cachedEmulatorResult!;
 
     try {
       // 1. Deteksi App Cloner / Dual Space / VirtualApp / Parallel Space / Island dari path direktori internal
@@ -189,6 +193,7 @@ class SecurityService {
       debugPrint('Info check emulator: $e');
     }
 
+    _cachedEmulatorResult = false;
     return false;
   }
 
@@ -261,9 +266,19 @@ class SecurityService {
       return false;
     }
 
-    // 2. Deteksi VPN & Proxy Lokal di HP
+    // 2. Deteksi VPN & Proxy Lokal di HP (Berjalan <1ms di lokal HP, 0 beban server)
     final bool vpnActive = await isLocalVpnActive();
     final bool proxyActive = isLocalProxyActive();
+
+    // 2B. Optimasi Skala Besar (Anti-Server Overload):
+    // Jika VPN & Proxy lokal aman dan server sudah memverifikasi sesi ini aman dalam 15 menit terakhir,
+    // gunakan cache sesi agar tidak membanjiri API server / Cloudflare D1 saat ribuan user bermain bersamaan.
+    if (!vpnActive &&
+        !proxyActive &&
+        _lastRemoteSecurityCheck != null &&
+        DateTime.now().difference(_lastRemoteSecurityCheck!).inMinutes < _remoteCacheMinutes) {
+      return true;
+    }
 
     // 3. Deteksi IP Publik & Proxy/Datacenter
     final ipIntel = await _checkPublicIpIntelligence();
@@ -352,6 +367,8 @@ class SecurityService {
       return false;
     }
 
+    // Simpan timestamp verifikasi aman agar hemat kuota server selama 15 menit ke depan
+    _lastRemoteSecurityCheck = DateTime.now();
     return true;
   }
 

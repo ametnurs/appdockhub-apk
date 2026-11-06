@@ -380,11 +380,12 @@ async function handleAdsReward(request, env) {
   const isLimitNow = watchedToday >= CONFIG.MAX_DAILY_ADS;
   const remaining = CONFIG.MAX_DAILY_ADS - watchedToday;
 
-  // Notifikasi instan ke Telegram jika user sudah terhubung
-  if (user.telegram_id && !user.telegram_id.startsWith('temp_')) {
-    let notifyMsg = `📺 *REWARDED AD BERHASIL DITONTON!*\n\n` +
-      `💰 Saldo Bertambah: *+Rp ${safeReward.toLocaleString('id-ID')}*\n` +
-      `🎯 Kuota Hari Ini: *${watchedToday}/${CONFIG.MAX_DAILY_ADS}*\n` +
+  // Optimasi Skala Besar: Kirim notifikasi Telegram hanya pada Iklan ke-1, kelipatan 10 (10,20,30,40,50), atau saat kuota 60/60 selesai
+  // agar Bot Telegram tidak terkena Rate Limit (429 Too Many Requests) saat ribuan user menonton iklan bersamaan.
+  if (user.telegram_id && !user.telegram_id.startsWith('temp_') && (watchedToday === 1 || watchedToday % 10 === 0 || isLimitNow)) {
+    let notifyMsg = `📺 *UPDATE SALDO GAME CYBER ORBIT!*\n\n` +
+      `💰 Reward Terakhir: *+Rp ${safeReward.toLocaleString('id-ID')}*\n` +
+      `🎯 Progres Hari Ini: *${watchedToday}/${CONFIG.MAX_DAILY_ADS} Iklan*\n` +
       `💵 Total Saldo Iklan: *Rp ${newBalanceAds.toLocaleString('id-ID')}*`;
 
     if (isLimitNow) {

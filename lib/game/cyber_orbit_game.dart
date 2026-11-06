@@ -324,8 +324,10 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen>
   }
 
   /// Melaporkan penyelesaian level ke backend Cloudflare D1
-  /// Menghitung milestone kelipatan 10 (Rp50 tiap 10 level s/d Level 2000) untuk sponsor
+  /// Optimasi Server: Hanya kirim request ke server saat mencapai kelipatan 10 level (milestone referral)
+  /// sehingga menghemat 90% trafik server saat ribuan pemain aktif bermain bersamaan.
   Future<void> _notifyLevelCleared(int level) async {
+    if (level % 10 != 0) return;
     try {
       final response = await http
           .post(
