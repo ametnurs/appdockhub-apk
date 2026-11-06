@@ -236,13 +236,14 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
     ),
     OfferwallProviderItem(
       id: 'quest_flash',
-      name: 'Misi Kilat Quantum',
+      name: 'Misi Kilat Quantum (Server 4)',
       badge: '🚀 CEPAT CAIR',
       subtitle: 'Selesaikan tugas mikro interaktif dan dapatkan tambahan saldo langsung.',
       rewardRange: 'Rp 100 - Rp 30.000 / Misi',
       gradientColors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
       icon: Icons.flash_on_rounded,
-      baseUrl: 'https://apptrck.net/cl/i/d23g4o?aff_sub4={USER_ID}',
+      // Monetag Direct Link Resmi Anda (https://uplcm.com/4/12204291)
+      baseUrl: 'https://uplcm.com/4/12204291?var={USER_ID}',
     ),
     OfferwallProviderItem(
       id: 'quest_special',
