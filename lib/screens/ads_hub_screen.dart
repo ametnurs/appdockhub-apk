@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/ads_controller.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
@@ -14,6 +15,7 @@ class OfferwallProviderItem {
   final List<Color> gradientColors;
   final IconData icon;
   final String baseUrl;
+  final String? embeddedHtml;
 
   const OfferwallProviderItem({
     required this.id,
@@ -24,14 +26,141 @@ class OfferwallProviderItem {
     required this.gradientColors,
     required this.icon,
     required this.baseUrl,
+    this.embeddedHtml,
   });
 
   String buildUrl(String userId) => baseUrl.replaceAll('{USER_ID}', Uri.encodeComponent(userId));
+
+  String? buildHtml(String userId) {
+    if (embeddedHtml == null) return null;
+    return embeddedHtml!.replaceAll('{USER_ID}', Uri.encodeComponent(userId));
+  }
+}
+
+/// Layar In-App WebView untuk menampilkan Offerwall / Script CPA langsung di dalam APK
+/// tanpa membuka browser eksternal.
+class InAppOfferwallViewer extends StatefulWidget {
+  final String title;
+  final String? url;
+  final String? htmlContent;
+  final String subId;
+  final Color accentColor;
+
+  const InAppOfferwallViewer({
+    Key? key,
+    required this.title,
+    this.url,
+    this.htmlContent,
+    required this.subId,
+    required this.accentColor,
+  }) : super(key: key);
+
+  @override
+  State<InAppOfferwallViewer> createState() => _InAppOfferwallViewerState();
+}
+
+class _InAppOfferwallViewerState extends State<InAppOfferwallViewer> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF070B14))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (_) {
+            if (mounted) setState(() => _isLoading = true);
+          },
+          onPageFinished: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+          onWebResourceError: (_) {
+            if (mounted) setState(() => _isLoading = false);
+          },
+        ),
+      );
+
+    if (widget.htmlContent != null && widget.htmlContent!.isNotEmpty) {
+      _controller.loadHtmlString(
+        widget.htmlContent!,
+        baseUrl: 'https://playabledownload.com/',
+      );
+    } else if (widget.url != null && widget.url!.isNotEmpty) {
+      _controller.loadRequest(Uri.parse(widget.url!));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF070B14),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0B1120),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.title,
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'ID: ${widget.subId}',
+              style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontFamily: 'monospace'),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Muat Ulang',
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              if (widget.htmlContent != null && widget.htmlContent!.isNotEmpty) {
+                _controller.loadHtmlString(
+                  widget.htmlContent!,
+                  baseUrl: 'https://playabledownload.com/',
+                );
+              } else {
+                _controller.reload();
+              }
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          WebViewWidget(controller: _controller),
+          if (_isLoading)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: widget.accentColor),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Memuat Misi Offerwall...',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// AdsHubScreen (Offerwall & Smartlink Center):
-/// Menampilkan jaringan yang sudah ACC & Instant Approval:
-/// OGAds, Adsterra, Monetag, Mobidea, CPALead, CPAGrip, dan TimeWall.
+/// Menampilkan jaringan yang sudah ACC & Instant Approval langsung di dalam APK (In-App WebView):
+/// CPAGrip (ID 1920856), OGAds, Adsterra, Monetag, Mobidea, CPALead, dan TimeWall.
 class AdsHubScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -42,8 +171,45 @@ class AdsHubScreen extends StatefulWidget {
 }
 
 class _AdsHubScreenState extends State<AdsHubScreen> {
-  // Daftar Jaringan Offerwall & Smartlink (Ganti URL dengan Link Offerwall / Direct Smartlink dari dashboard Anda)
+  // Script HTML Resmi CPAGrip Anda (ID: 1920856) dengan dukungan Tracking SubID otomatis
+  static const String _cpaGripHtmlTemplate = '''<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CPAGrip Offerwall</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #070B14;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <script type="text/javascript">var lck = false;</script>
+  <script type="text/javascript" src="https://playabledownload.com/script_include.php?id=1920856&tracking_id={USER_ID}"></script>
+  <script type="text/javascript">if(!lck){top.location = 'https://playabledownload.com/help/ablk.php?lkt=4'; }</script>
+  <noscript>Please enable JavaScript to access this page.<meta http-equiv="refresh" content="0;url=https://playabledownload.com/help/enable_javascript.php?lkt=4" ></meta></noscript>
+</body>
+</html>''';
+
   static const List<OfferwallProviderItem> _offerwallProviders = [
+    OfferwallProviderItem(
+      id: 'cpagrip',
+      name: 'CPAGrip Offerwall',
+      badge: '🔥 AKTIF & INSTAN',
+      subtitle: 'Selesaikan misi aplikasi, kuisioner singkat & klaim reward langsung di dalam aplikasi.',
+      rewardRange: 'Rp 500 - Rp 85.000 / Misi',
+      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
+      icon: Icons.card_giftcard_rounded,
+      baseUrl: 'https://playabledownload.com/script_include.php?id=1920856&tracking_id={USER_ID}',
+      embeddedHtml: _cpaGripHtmlTemplate,
+    ),
     OfferwallProviderItem(
       id: 'ogads',
       name: 'OGAds Mobile Offerwall',
@@ -95,16 +261,6 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
       baseUrl: 'https://www.cpalead.com/mobile/locker/?pub=YOUR_CPALEAD_ID&subid={USER_ID}',
     ),
     OfferwallProviderItem(
-      id: 'cpagrip',
-      name: 'CPAGrip Offerwall',
-      badge: '🎁 MUDAH',
-      subtitle: 'Isi kuisioner singkat & registrasi aplikasi baru.',
-      rewardRange: 'Rp 400 - Rp 80.000 / Misi',
-      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
-      icon: Icons.card_giftcard_rounded,
-      baseUrl: 'https://www.cpagrip.com/show.php?l=0&u=YOUR_CPAGRIP_UID&id=YOUR_WALL_ID&tracking_id={USER_ID}',
-    ),
-    OfferwallProviderItem(
       id: 'timewall',
       name: 'TimeWall Micro-Tasks',
       badge: '🎯 TUGAS HARIAN',
@@ -133,122 +289,24 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
     if (mounted) setState(() {});
   }
 
-  void _openOfferwallProvider(OfferwallProviderItem provider) {
+  /// Langsung membuka Offerwall di dalam aplikasi (In-App WebView) tanpa keluar ke browser
+  void _openOfferwallInApp(OfferwallProviderItem provider) {
     final userId = widget.adsController.pairToken.isNotEmpty
         ? widget.adsController.pairToken
         : 'guest_user';
     final targetUrl = provider.buildUrl(userId);
+    final targetHtml = provider.buildHtml(userId);
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF0F172A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => InAppOfferwallViewer(
+          title: provider.name,
+          url: targetUrl,
+          htmlContent: targetHtml,
+          subId: userId,
+          accentColor: provider.gradientColors.first,
+        ),
       ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: provider.gradientColors),
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Icon(provider.icon, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          provider.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          provider.rewardRange,
-                          style: const TextStyle(
-                            color: Color(0xFF10B981),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.04),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '📌 Cara Klaim Reward:',
-                      style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '1. Klik tombol di bawah untuk membuka halaman penawaran.\n'
-                      '2. Selesaikan misi (Install App / Survey / Kunjungan Sponsor).\n'
-                      '3. Saldo Rupiah otomatis masuk ke akun Anda melalui Postback Server.',
-                      style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, height: 1.45),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'SubID Tracking Anda: $userId',
-                      style: const TextStyle(
-                        color: Color(0xFF38BDF8),
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: provider.gradientColors.first,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    DeepLinkService.openExternalUrl(targetUrl);
-                  },
-                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                  label: Text(
-                    'Buka ${provider.name}',
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -274,7 +332,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               _buildQuickVideoCard(controller),
               const SizedBox(height: 20),
 
-              // 3. JUDUL DAFTAR MITRA OFFERWALL (OGADS, ADSTERRA, MONETAG, MOBIDEA, DLL)
+              // 3. JUDUL DAFTAR MITRA OFFERWALL (CPAGRIP, OGADS, ADSTERRA, MONETAG, MOBIDEA, DLL)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -293,7 +351,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      'Auto Postback',
+                      'In-App Viewer',
                       style: TextStyle(
                         color: Color(0xFF10B981),
                         fontSize: 10,
@@ -305,7 +363,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Selesaikan misi dari OGAds, Adsterra, Monetag, Mobidea & CPALead untuk mengumpulkan saldo tambahan.',
+                'Klik salah satu jaringan di bawah untuk membuka daftar misi langsung di dalam aplikasi tanpa keluar ke browser.',
                 style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.35),
               ),
               const SizedBox(height: 14),
@@ -367,7 +425,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                   ),
                 ),
                 Text(
-                  'OGAds • Adsterra • Monetag • Mobidea',
+                  'CPAGrip • OGAds • Adsterra • Monetag',
                   style: TextStyle(
                     color: Color(0xFF38BDF8),
                     fontSize: 11,
@@ -489,7 +547,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _openOfferwallProvider(provider),
+          onTap: () => _openOfferwallInApp(provider),
           child: Padding(
             padding: const EdgeInsets.all(15),
             child: Row(
