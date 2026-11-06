@@ -551,6 +551,18 @@ async function handleSecurityCheck(request, env) {
   const pairToken = (body.pairToken || '').trim();
   const clientProxyFlag = Boolean(body.clientProxyDetected);
   const clientVpnFlag = Boolean(body.clientVpnDetected);
+  const clientEmulatorFlag = Boolean(body.clientEmulatorDetected);
+
+  if (clientEmulatorFlag) {
+    return jsonResponse({
+      allowed: false,
+      status: 'BANNED',
+      ip: 'EMULATOR / VIRTUAL PHONE',
+      warnings: 3,
+      maxWarnings: 3,
+      message: 'DILARANG MENGGUNAKAN EMULATOR / VIRTUAL PHONE! Aplikasi ini hanya boleh dijalankan pada HP fisik asli.'
+    });
+  }
 
   // Ambil IP asli dan metadata jaringan dari Cloudflare Edge
   const clientIp = (

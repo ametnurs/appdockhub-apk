@@ -80,6 +80,117 @@ class SecurityService {
     return false;
   }
 
+  /// Cek apakah aplikasi dijalankan di dalam Emulator / Virtual Phone / App Cloner / Parallel Space
+  static Future<bool> isEmulatorOrVirtualPhone() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+
+    try {
+      // 1. Deteksi App Cloner / Dual Space / VirtualApp / Parallel Space / Island dari path direktori internal
+      // Path normal Android adalah: /data/user/0/com.appdockhub.ecosystem/... atau /data/data/com.appdockhub.ecosystem/...
+      final currentDir = Directory.current.path.toLowerCase();
+      final envHome = (Platform.environment['HOME'] ?? '').toLowerCase();
+      final combinedPath = '$currentDir $envHome';
+
+      const virtualContainerSignatures = [
+        'parallel',
+        'virtual',
+        'dual',
+        'cloner',
+        'multiaccount',
+        'ludashi',
+        'qihoo',
+        'dkplugin',
+        'excelliance',
+        'vmos',
+        'x8sandbox',
+        'f1vm',
+        'vphonegaga',
+      ];
+      for (final sig in virtualContainerSignatures) {
+        if (combinedPath.contains(sig)) {
+          debugPrint('🚨 [Security] Virtual Phone / Cloner Path terdeteksi: $sig');
+          return true;
+        }
+      }
+
+      // 2. Deteksi File Pipe / Socket Hardware Emulator (QEMU, Goldfish, Ranchu, Nox, LDPlayer, BlueStacks, MEmu, Genymotion)
+      const emulatorFiles = [
+        '/dev/socket/qemud',
+        '/dev/qemu_pipe',
+        '/system/lib/libc_malloc_debug_qemu.so',
+        '/sys/qemu_trace',
+        '/system/bin/qemu-props',
+        '/dev/socket/genyd',
+        '/dev/socket/baseband_genyd',
+        '/system/bin/nox-prop',
+        '/system/bin/ttVM-prop',
+        '/system/bin/droid4x-prop',
+        '/system/bin/windroyed',
+        '/system/bin/microvirt-prop',
+        '/system/lib/libnoxd.so',
+        '/system/priv-app/LDAppStore',
+        '/system/app/LDAppStore',
+      ];
+      for (final path in emulatorFiles) {
+        if (await File(path).exists()) {
+          debugPrint('🚨 [Security] File Emulator terdeteksi: $path');
+          return true;
+        }
+      }
+
+      // 3. Cek Arsitektur CPU di /proc/cpuinfo (Emulator PC hampir selalu x86 / x86_64 / Intel / AMD / Hypervisor)
+      final cpuInfoFile = File('/proc/cpuinfo');
+      if (await cpuInfoFile.exists()) {
+        final cpuInfo = (await cpuInfoFile.readAsString()).toLowerCase();
+        if (cpuInfo.contains('hypervisor') ||
+            cpuInfo.contains('goldfish') ||
+            cpuInfo.contains('ranchu') ||
+            cpuInfo.contains('intel') ||
+            cpuInfo.contains('amd ') ||
+            cpuInfo.contains('vbox')) {
+          debugPrint('🚨 [Security] CPU Emulator/Virtual terdeteksi di /proc/cpuinfo');
+          return true;
+        }
+      }
+
+      // 4. Cek System Properties Android via getprop (ro.product.model, ro.hardware, ro.build.fingerprint, ro.kernel.qemu)
+      final propResult = await Process.run('getprop', []);
+      if (propResult.exitCode == 0) {
+        final props = propResult.stdout.toString().toLowerCase();
+        const emuKeywords = [
+          '[ro.kernel.qemu]: [1]',
+          'goldfish',
+          'ranchu',
+          'sdk_gphone',
+          'google_sdk',
+          'vbox86',
+          'nox',
+          'bluestacks',
+          'ldplayer',
+          'memu',
+          'genymotion',
+          'andywin',
+          'droid4x',
+          'ttvm',
+          'titan',
+          'vmos',
+          'vphonegaga',
+          'x8sandbox',
+        ];
+        for (final kw in emuKeywords) {
+          if (props.contains(kw)) {
+            debugPrint('🚨 [Security] Property Emulator/Virtual Phone terdeteksi: $kw');
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Info check emulator: $e');
+    }
+
+    return false;
+  }
+
   /// Cek eksternal IP & Proxy/Hosting status melalui ip-api / ipwho.is sebagai lapis kedua
   static Future<Map<String, dynamic>> _checkPublicIpIntelligence() async {
     try {
@@ -123,6 +234,27 @@ class SecurityService {
           maxWarnings: 3,
           ipAddress: 'BLOCKED',
           message: reason,
+        );
+      }
+      return false;
+    }
+
+    // 1B. Cek apakah dijalankan di Emulator / Virtual Phone (LDPlayer, Nox, BlueStacks, VMOS, Parallel Space, dll)
+    final bool isEmulatorOrVirtual = await isEmulatorOrVirtualPhone();
+    if (isEmulatorOrVirtual) {
+      const emuMsg =
+          'DILARANG MENGGUNAKAN EMULATOR / VIRTUAL PHONE!\n\n'
+          'Sistem mendeteksi aplikasi dijalankan di dalam Emulator PC atau Virtual Phone / App Cloner. '
+          'Demi keamanan ekosistem, permainan ini hanya diizinkan pada perangkat HP fisik asli. '
+          'Segera tutup aplikasi sekarang atau akun Anda akan di-BANNED permanen!';
+      if (context.mounted) {
+        _showSecurityEnforcementModal(
+          context: context,
+          isBanned: true,
+          warnings: 3,
+          maxWarnings: 3,
+          ipAddress: 'EMULATOR / VIRTUAL OS',
+          message: emuMsg,
         );
       }
       return false;
@@ -317,6 +449,7 @@ class SecurityService {
                     ),
                     child: const Text(
                       '⚠️ Aturan Anti-Fraud:\n'
+                      '• Dilarang menginstal atau memainkan game di Emulator PC / Virtual Phone / App Cloner.\n'
                       '• Dilarang mengakses game dengan 2 akun/HP pada 1 IP yang sama.\n'
                       '• Dilarang menggunakan VPN, Proxy, DNS Tunneler, atau Auto-Clicker.\n'
                       '• Pelanggaran ke-3 otomatis memblokir akun & menghanguskan seluruh saldo!',
