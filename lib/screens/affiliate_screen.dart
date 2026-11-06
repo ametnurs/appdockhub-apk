@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
-/// AffiliateScreen: Tab Khusus Program Kemitraan Afiliasi 2-Tier
-/// Tempat user mengambil link referral, melihat skema komisi 30% + 5%,
-/// dan menyalin swipe files promosi WhatsApp/Telegram.
+/// AffiliateScreen: Tab Khusus Program Kemitraan Afiliasi 2-Tier Multi-Currency
+/// Otomatis menampilkan mata uang lokal sesuai negara pengguna (IDR, USD, EUR, dll).
 class AffiliateScreen extends StatelessWidget {
   final String pairToken;
 
@@ -17,9 +17,13 @@ class AffiliateScreen extends StatelessWidget {
     const cardColor = Color(0xFF0F172A);
     const primaryOrange = Color(0xFFF97316);
 
+    final cur = CurrencyService.current;
+    final t1Formatted = CurrencyService.format(cur.tier1Commission);
+    final t2Formatted = CurrencyService.format(cur.tier2Commission);
+
     const refLink = 'https://t.me/AppDockHub_Bot?start=affiliate';
-    const promoCopy = '🚀 Otomatisasi bisnis digital multi-akun Reddit, Facebook, dan TikTok! '
-        'Beli lisensi resmi atau hasilkan pasif income harian lewat program kemitraan resmi: $refLink';
+    final promoCopy = '🚀 Automate your business with Reddit, Facebook, & TikTok Multi-Screen tools! '
+        'Buy official licenses or earn daily passive income via our 2-Tier Partner Program: $refLink';
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -34,7 +38,6 @@ class AffiliateScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Banner Ads di Bagian Atas Screen untuk Monetisasi Tambahan
             const BannerAdWidget(),
             const SizedBox(height: 16),
 
@@ -70,9 +73,9 @@ class AffiliateScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildTierRow('Tier 1 (Direct Seller)', '30%', 'Rp 29.700', 'Setiap Anda menjual 1 lisensi software.', primaryOrange),
+                  _buildTierRow('Tier 1 (Direct Seller)', '30%', t1Formatted, 'Setiap Anda menjual 1 lisensi software.', primaryOrange),
                   const Divider(color: Colors.white12, height: 20),
-                  _buildTierRow('Tier 2 (Sponsor Pasif)', '5%', 'Rp 4.950', 'Setiap kali teman yang Anda ajak berhasil menjual.', const Color(0xFF38BDF8)),
+                  _buildTierRow('Tier 2 (Sponsor Pasif)', '5%', t2Formatted, 'Setiap kali teman yang Anda ajak berhasil menjual.', const Color(0xFF38BDF8)),
                 ],
               ),
             ),
@@ -143,9 +146,9 @@ class AffiliateScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
-                    child: const Text(
+                    child: Text(
                       promoCopy,
-                      style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.4),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11, height: 1.4),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -155,9 +158,9 @@ class AffiliateScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () {
-                      Clipboard.setData(const ClipboardData(text: promoCopy));
+                      Clipboard.setData(ClipboardData(text: promoCopy));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Teks promosi disalin ke clipboard! Siap sebar ke WhatsApp/Telegram.')),
+                        const SnackBar(content: Text('Teks promosi disalin ke clipboard! Siap sebar.')),
                       );
                     },
                     icon: const Icon(Icons.copy_rounded, color: Colors.white, size: 16),

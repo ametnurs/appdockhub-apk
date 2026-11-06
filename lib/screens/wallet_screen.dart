@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
-/// WalletScreen: Tab Dompet Digital & Pencairan Saldo
-/// Menampilkan saldo transparan dari Iklan Rewarded, Komisi Direct 30%, dan Komisi Pasif 5%,
-/// lengkap dengan integrasi pencairan e-wallet & Banner Ads pendukung.
+/// WalletScreen: Tab Dompet Digital & Pencairan Saldo Multi-Currency
+/// Otomatis menampilkan mata uang sesuai negara pengguna (IDR, USD, EUR, MYR, dll).
 class WalletScreen extends StatelessWidget {
   final double adsBalance;
 
@@ -15,6 +15,8 @@ class WalletScreen extends StatelessWidget {
     const bgColor = Color(0xFF080C14);
     const cardColor = Color(0xFF0F172A);
     const primaryOrange = Color(0xFFF97316);
+
+    final cur = CurrencyService.current;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -29,7 +31,6 @@ class WalletScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Banner Ads Atas
             const BannerAdWidget(),
             const SizedBox(height: 16),
 
@@ -56,7 +57,7 @@ class WalletScreen extends StatelessWidget {
                   const Text('Total Saldo Dapat Ditarik', style: TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 6),
                   Text(
-                    'Rp ${adsBalance.toStringAsFixed(0)}',
+                    CurrencyService.format(adsBalance),
                     style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
@@ -66,9 +67,9 @@ class WalletScreen extends StatelessWidget {
                       color: Colors.white.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'Minimal Penarikan: Rp 50.000',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                    child: Text(
+                      'Minimal Penarikan: ${CurrencyService.format(cur.minWithdrawal)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -89,7 +90,7 @@ class WalletScreen extends StatelessWidget {
                 children: [
                   const Text('Rincian Sumber Pendapatan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 14),
-                  _buildBalanceItem('📺 Saldo Nonton Iklan (APK)', 'Rp ${adsBalance.toStringAsFixed(0)}', Colors.amber),
+                  _buildBalanceItem('📺 Saldo Nonton Iklan (APK)', CurrencyService.format(adsBalance), Colors.amber),
                   const Divider(color: Colors.white10, height: 16),
                   _buildBalanceItem('🥇 Komisi Afiliasi Direct (30%)', 'Tersinkron di Bot', primaryOrange),
                   const Divider(color: Colors.white10, height: 16),
@@ -111,7 +112,7 @@ class WalletScreen extends StatelessWidget {
                 onPressed: () => DeepLinkService.openAffiliateProgram(),
                 icon: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 20),
                 label: const Text(
-                  'Tarik Saldo via Bot Telegram (DANA/BCA)',
+                  'Tarik Saldo via Bot Telegram (E-Wallet/Bank)',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),

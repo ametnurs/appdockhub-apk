@@ -865,11 +865,19 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       });
 
       // Callback dari Flutter saat Reward berhasil masuk
-      window.onRewardSuccess = function(amount) {
-        alert('🎉 Saldo +Rp ' + amount + ' Berhasil Masuk ke Akun Anda!');
+      window.onRewardSuccess = function(amountText) {
+        alert('🎉 Saldo +' + amountText + ' Berhasil Masuk ke Akun Anda!');
         if (window.gameInstance) {
           window.gameInstance.advanceNextLevel();
         }
+      };
+
+      // Konfigurasi Mata Uang Dinamis dari Flutter (IDR, USD, EUR, dll)
+      window.setCurrency = function(rewardText) {
+        const bonusEl = document.getElementById('clear-bonus');
+        const btnEl = document.getElementById('btn-claim-reward');
+        if (bonusEl) bonusEl.textContent = rewardText;
+        if (btnEl) btnEl.textContent = '🎁 KLAIM ' + rewardText + ' (NONTON VIDEO)';
       };
     })();
   </script>

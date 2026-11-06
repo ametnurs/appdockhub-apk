@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/ads_controller.dart';
+import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
 import 'game_html.dart';
 
 /// CyberOrbitGameScreen: Menjalankan Game Orisinal "Cyber Orbit: Quantum Core"
 /// melalui WebView dengan performa 60 FPS Canvas & Web Audio API, terhubung
-/// langsung ke Cloudflare D1 Backend, AdMob Rewarded Ads, dan Afiliasi 2-Tier.
+/// langsung ke Cloudflare D1 Backend, AdMob Rewarded Ads, dan Afiliasi 2-Tier
+/// dengan dukungan Multi-Currency Global (IDR, USD, EUR, MYR, dll).
 class CyberOrbitGameScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -57,6 +59,9 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
               setState(() {
                 _isLoading = false;
               });
+              // Suntikkan konfigurasi mata uang lokal ke game JavaScript
+              final rewardText = CurrencyService.formattedReward;
+              _webViewController.runJavaScript("window.setCurrency('$rewardText');");
             }
           },
         ),
@@ -71,13 +76,12 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
       final event = data['event'];
 
       if (event == 'WATCH_AD') {
-        // User menekan tombol "KLAIM +RP 300 (NONTON VIDEO)" di modal game
         if (widget.adsController.isLimitReached) {
           widget.adsController.showConversionFunnelDialog(context);
         } else {
           await widget.adsController.watchRewardedAd(context);
-          // Beritahu game HTML bahwa reward berhasil masuk
-          _webViewController.runJavaScript('window.onRewardSuccess(10);');
+          final rewardText = CurrencyService.format(widget.adsController.rewardPerAd);
+          _webViewController.runJavaScript("window.onRewardSuccess('$rewardText');");
         }
       } else if (event == 'LEVEL_CLEARED') {
         debugPrint('🎉 Level ${data['level']} Selesai! Skor: ${data['score']}');
@@ -99,7 +103,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. TOP HUD GAME STATUS (Saldo, Kuota 10/10, Telegram Pair)
+            // 1. TOP HUD GAME STATUS (Saldo Dinamis Sesuai Negara, Kuota, Pairing)
             _buildTopHUD(controller),
 
             // 2. WEBVIEW GAME ENGINE (HTML5 CANVAS 60 FPS)
@@ -130,7 +134,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Saldo Poin Iklan
+          // Saldo Poin Iklan (Format Mata Uang Dinamis)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -143,7 +147,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
                 const Icon(Icons.monetization_on_rounded, color: Color(0xFFFF9900), size: 16),
                 const SizedBox(width: 6),
                 Text(
-                  'Rp ${controller.balanceAds.toStringAsFixed(0)}',
+                  CurrencyService.format(controller.balanceAds),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -171,8 +175,8 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
             ),
             child: Text(
               controller.isLimitReached
-                  ? '🔒 Kuota 10/10 Habis'
-                  : '📺 Kuota: ${controller.adsWatchedToday}/10',
+                  ? '🔒 Limit 10/10'
+                  : '📺 Ads: ${controller.adsWatchedToday}/10',
               style: TextStyle(
                 color: controller.isLimitReached ? Colors.amber : const Color(0xFF38BDF8),
                 fontSize: 11,
