@@ -6,8 +6,9 @@ import 'ads_hub_screen.dart';
 import 'affiliate_screen.dart';
 import 'wallet_screen.dart';
 
-/// MainNavigationScreen: Container Navigasi 4 Tab Utama Ekosistem AppDock Hub
-/// Dilengkapi Sticky Banner Ad yang selalu tampil di atas Bottom Navigation Bar.
+/// MainNavigationScreen: Modern Floating Dock Navigation Bar
+/// Dilengkapi efek kaca (Glassmorphism), sticky bottom banner ads yang terbungkus elegan,
+/// dan transisi tab yang halus.
 class MainNavigationScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -22,8 +23,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const cardColor = Color(0xFF0F172A);
-    const primaryOrange = Color(0xFFF97316);
+    const bgDark = Color(0xFF070B14);
+    const orangeStart = Color(0xFFFF5E00);
 
     final List<Widget> screens = [
       AdsHubScreen(adsController: widget.adsController),
@@ -33,50 +34,84 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: bgDark,
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
       ),
-      // Sticky Persistent Banner Ads di bagian bawah layar sebelum Navbar
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // STICKY BOTTOM BANNER ADS
-          Container(
-            color: const Color(0xFF0B132B),
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: const BannerAdWidget(),
-          ),
-          // BOTTOM NAVIGATION BAR
-          BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) => setState(() => _currentIndex = index),
-            backgroundColor: cardColor,
-            selectedItemColor: primaryOrange,
-            unselectedItemColor: Colors.grey,
-            type: BottomNavigationBarType.fixed,
-            selectedFontSize: 11,
-            unselectedFontSize: 10,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.play_circle_filled_rounded),
-                label: 'Cuan Ads',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B1120),
+          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // STICKY BOTTOM BANNER ADS TERBUNGKUS FRAME RAPI
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white.withOpacity(0.06)),
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.vpn_key_rounded),
-                label: 'Software HWID',
+              child: const BannerAdWidget(),
+            ),
+
+            // MODERN FLOATING DOCK BOTTOM NAVIGATION
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, Icons.play_circle_fill_rounded, 'Cuan Ads'),
+                  _buildNavItem(1, Icons.vpn_key_rounded, 'Software HWID'),
+                  _buildNavItem(2, Icons.people_alt_rounded, 'Afiliasi 2-Tier'),
+                  _buildNavItem(3, Icons.account_balance_wallet_rounded, 'Dompet'),
+                ],
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.people_alt_rounded),
-                label: 'Afiliasi 2-Tier',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentIndex == index;
+    const orangeColor = Color(0xFFFF5E00);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => setState(() => _currentIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? orangeColor.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: isSelected ? Border.all(color: orangeColor.withOpacity(0.35)) : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 22,
+              color: isSelected ? orangeColor : const Color(0xFF64748B),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF64748B),
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_balance_wallet_rounded),
-                label: 'Dompet',
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
