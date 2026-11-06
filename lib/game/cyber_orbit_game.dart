@@ -4,12 +4,13 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/ads_controller.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
+import '../services/locale_service.dart';
 import 'game_html.dart';
 
 /// CyberOrbitGameScreen: Menjalankan Game Orisinal "Cyber Orbit: Quantum Core"
 /// melalui WebView dengan performa 60 FPS Canvas & Web Audio API, terhubung
 /// langsung ke Cloudflare D1 Backend, AdMob Rewarded Ads, dan Afiliasi 2-Tier
-/// dengan dukungan Multi-Currency Global (IDR, USD, EUR, MYR, dll).
+/// dengan dukungan Multi-Currency & Otomatisasi Bahasa (ID / EN Global).
 class CyberOrbitGameScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -59,9 +60,19 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
               setState(() {
                 _isLoading = false;
               });
-              // Suntikkan konfigurasi mata uang lokal ke game JavaScript
+              // Suntikkan konfigurasi bahasa & mata uang dinamis ke game JavaScript
               final rewardText = CurrencyService.formattedReward;
-              _webViewController.runJavaScript("window.setCurrency('$rewardText');");
+              final btnClaimText = '${LocaleService.gameClaimBtn} $rewardText ${LocaleService.gameWatchVideo}';
+              final jsConfig = jsonEncode({
+                'rewardText': rewardText,
+                'btnClaimText': btnClaimText,
+                'titleClear': LocaleService.gameLevelCleared,
+                'btnSkip': LocaleService.gameSkipBtn,
+                'btnRetry': LocaleService.gameRetryBtn,
+                'startDesc': LocaleService.gameStartDesc,
+                'startBtn': LocaleService.gameStartBtn,
+              });
+              _webViewController.runJavaScript("window.setGameLocale($jsConfig);");
             }
           },
         ),
@@ -103,7 +114,7 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. TOP HUD GAME STATUS (Saldo Dinamis Sesuai Negara, Kuota, Pairing)
+            // 1. TOP HUD GAME STATUS (Saldo & Bahasa Dinamis)
             _buildTopHUD(controller),
 
             // 2. WEBVIEW GAME ENGINE (HTML5 CANVAS 60 FPS)
@@ -175,8 +186,8 @@ class _CyberOrbitGameScreenState extends State<CyberOrbitGameScreen> {
             ),
             child: Text(
               controller.isLimitReached
-                  ? '🔒 Limit 10/10'
-                  : '📺 Ads: ${controller.adsWatchedToday}/10',
+                  ? LocaleService.adsLimitReached
+                  : LocaleService.adsQuota(controller.adsWatchedToday, AdsController.maxDailyQuota),
               style: TextStyle(
                 color: controller.isLimitReached ? Colors.amber : const Color(0xFF38BDF8),
                 fontSize: 11,

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/currency_service.dart';
 import '../services/deep_link_service.dart';
+import '../services/locale_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
-/// WalletScreen: Tab Dompet Digital & Pencairan Saldo Multi-Currency
-/// Otomatis menampilkan mata uang sesuai negara pengguna (IDR, USD, EUR, MYR, dll).
+/// WalletScreen: Tab Dompet Digital & Pencairan Saldo Multi-Currency & Dual-Language
+/// Otomatis menampilkan mata uang dan bahasa sesuai negara pengguna (ID / EN).
 class WalletScreen extends StatelessWidget {
   final double adsBalance;
 
@@ -17,11 +18,12 @@ class WalletScreen extends StatelessWidget {
     const primaryOrange = Color(0xFFF97316);
 
     final cur = CurrencyService.current;
+    final minWithFormatted = CurrencyService.format(cur.minWithdrawal);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Dompet & Penarikan Saldo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(LocaleService.walletTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         backgroundColor: cardColor,
         elevation: 0,
         centerTitle: true,
@@ -54,7 +56,7 @@ class WalletScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Text('Total Saldo Dapat Ditarik', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(LocaleService.totalWithdrawable, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 6),
                   Text(
                     CurrencyService.format(adsBalance),
@@ -68,7 +70,7 @@ class WalletScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Minimal Penarikan: ${CurrencyService.format(cur.minWithdrawal)}',
+                      LocaleService.minWithdraw(minWithFormatted),
                       style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -88,13 +90,13 @@ class WalletScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Rincian Sumber Pendapatan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(LocaleService.breakdownTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 14),
-                  _buildBalanceItem('📺 Saldo Nonton Iklan (APK)', CurrencyService.format(adsBalance), Colors.amber),
+                  _buildBalanceItem(LocaleService.breakdownAds, CurrencyService.format(adsBalance), Colors.amber),
                   const Divider(color: Colors.white10, height: 16),
-                  _buildBalanceItem('🥇 Komisi Afiliasi Direct (30%)', 'Tersinkron di Bot', primaryOrange),
+                  _buildBalanceItem(LocaleService.breakdownT1, LocaleService.syncedInBot, primaryOrange),
                   const Divider(color: Colors.white10, height: 16),
-                  _buildBalanceItem('🥈 Komisi Pasif Tim Sponsor (5%)', 'Tersinkron di Bot', const Color(0xFF38BDF8)),
+                  _buildBalanceItem(LocaleService.breakdownT2, LocaleService.syncedInBot, const Color(0xFF38BDF8)),
                 ],
               ),
             ),
@@ -111,9 +113,9 @@ class WalletScreen extends StatelessWidget {
                 ),
                 onPressed: () => DeepLinkService.openAffiliateProgram(),
                 icon: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 20),
-                label: const Text(
-                  'Tarik Saldo via Bot Telegram (E-Wallet/Bank)',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                label: Text(
+                  LocaleService.withdrawBtn,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ),

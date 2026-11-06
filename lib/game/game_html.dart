@@ -872,12 +872,28 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         }
       };
 
-      // Konfigurasi Mata Uang Dinamis dari Flutter (IDR, USD, EUR, dll)
-      window.setCurrency = function(rewardText) {
+      // Konfigurasi Bahasa & Mata Uang Dinamis dari Flutter (IDR, USD, EUR, dll)
+      window.setGameLocale = function(cfg) {
+        if (!cfg) return;
         const bonusEl = document.getElementById('clear-bonus');
-        const btnEl = document.getElementById('btn-claim-reward');
-        if (bonusEl) bonusEl.textContent = rewardText;
-        if (btnEl) btnEl.textContent = '🎁 KLAIM ' + rewardText + ' (NONTON VIDEO)';
+        const btnClaimEl = document.getElementById('btn-claim-reward');
+        const titleClearEl = document.querySelector('#screen-clear h2');
+        const btnSkipEl = document.getElementById('btn-next-level');
+        const btnRetryEl = document.getElementById('btn-retry');
+        const startDescEl = document.querySelector('#screen-start .desc-text');
+        const startBtnEl = document.getElementById('btn-start');
+
+        if (bonusEl && cfg.rewardText) bonusEl.textContent = cfg.rewardText;
+        if (btnClaimEl && cfg.btnClaimText) btnClaimEl.textContent = cfg.btnClaimText;
+        if (titleClearEl && cfg.titleClear) titleClearEl.textContent = cfg.titleClear;
+        if (btnSkipEl && cfg.btnSkip) btnSkipEl.textContent = cfg.btnSkip;
+        if (btnRetryEl && cfg.btnRetry) btnRetryEl.textContent = cfg.btnRetry;
+        if (startDescEl && cfg.startDesc) startDescEl.textContent = cfg.startDesc;
+        if (startBtnEl && cfg.startBtn) startBtnEl.textContent = cfg.startBtn;
+      };
+
+      window.setCurrency = function(rewardText) {
+        window.setGameLocale({ rewardText: rewardText });
       };
     })();
   </script>

@@ -4,9 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/deep_link_service.dart';
+import '../services/locale_service.dart';
 
 /// ActivationScreen: Form Aktivasi Lisensi Digital Terikat HWID (1 Device = 1 License)
-/// Didesain dengan Modern Cyber-Glassmorphism aesthetic.
+/// Didesain dengan Modern Cyber-Glassmorphism aesthetic & Dual-Language (ID/EN).
 class ActivationScreen extends StatefulWidget {
   final String backendBaseUrl;
 
@@ -51,7 +52,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
     if (hwid.isEmpty || licenseKey.isEmpty) {
       setState(() {
-        _statusMessage = 'Harap isi Kode HWID dan License Key!';
+        _statusMessage = LocaleService.isIndonesian
+            ? 'Harap isi Kode HWID dan License Key!'
+            : 'Please enter both HWID and License Key!';
         _isSuccess = false;
       });
       return;
@@ -82,18 +85,22 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
         setState(() {
           _isSuccess = true;
-          _statusMessage = data['message'] ?? 'Aktivasi Berhasil! 1 Perangkat telah terikat.';
+          _statusMessage = data['message'] ?? (LocaleService.isIndonesian
+              ? 'Aktivasi Berhasil! 1 Perangkat telah terikat.'
+              : 'Activation Successful! Device bound.');
         });
       } else {
         setState(() {
           _isSuccess = false;
-          _statusMessage = data['message'] ?? 'Gagal aktivasi. Periksa kembali lisensi Anda.';
+          _statusMessage = data['message'] ?? (LocaleService.isIndonesian
+              ? 'Gagal aktivasi. Periksa kembali lisensi Anda.'
+              : 'Activation failed. Please check your license.');
         });
       }
     } catch (e) {
       setState(() {
         _isSuccess = false;
-        _statusMessage = 'Gagal terhubung ke server aktivasi: $e';
+        _statusMessage = 'Server connection error: $e';
       });
     } finally {
       setState(() {
@@ -111,7 +118,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
     return Scaffold(
       backgroundColor: bgDark,
       appBar: AppBar(
-        title: const Text('Aktivasi Perangkat HWID', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(LocaleService.hwidTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0B1120),
         elevation: 0,
         centerTitle: true,
@@ -163,19 +170,18 @@ class _ActivationScreenState extends State<ActivationScreen> {
                 const SizedBox(height: 16),
 
                 const Text(
-                  'AppDock Hub Security',
+                  'Cyber Orbit Security',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '1 Device = 1 Physical License Protocol',
+                Text(
+                  LocaleService.hwidSubtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFFFF9E00), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+                  style: const TextStyle(color: Color(0xFFFF9E00), fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
                 ),
                 const SizedBox(height: 20),
 
-                // Notifikasi Status
                 if (_statusMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -204,9 +210,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                 ],
 
                 // HWID Input
-                const Text(
-                  'Hardware ID (HWID) Perangkat Anda',
-                  style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600),
+                Text(
+                  LocaleService.yourHwidLabel,
+                  style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 TextField(
@@ -220,7 +226,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _hwidController.text));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('HWID disalin ke papan klip!')),
+                          SnackBar(content: Text(LocaleService.hwidCopied)),
                         );
                       },
                     ),
@@ -232,9 +238,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                 const SizedBox(height: 16),
 
                 // License Key Input
-                const Text(
-                  'Masukkan License Key',
-                  style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600),
+                Text(
+                  LocaleService.enterKeyLabel,
+                  style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 TextField(
@@ -242,7 +248,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontSize: 13),
                   textCapitalization: TextCapitalization.characters,
                   decoration: InputDecoration(
-                    hintText: 'CONTOH: RD-PRO-XXXX-XXXX',
+                    hintText: 'EXAMPLE: RD-PRO-XXXX-XXXX',
                     hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
                     prefixIcon: const Icon(Icons.vpn_key_rounded, color: Colors.grey, size: 18),
                     filled: true,
@@ -268,9 +274,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                             height: 20,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
-                        : const Text(
-                            'Aktivasi Sekarang',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        : Text(
+                            LocaleService.activateBtn,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                   ),
                 ),
@@ -281,9 +287,9 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   child: TextButton.icon(
                     onPressed: () => DeepLinkService.openSoftwareOrder('reddit_pro'),
                     icon: const Icon(Icons.shopping_cart_rounded, color: orangeStart, size: 16),
-                    label: const Text(
-                      'Belum punya lisensi? Beli via Bot Telegram (Rp 99.000)',
-                      style: TextStyle(color: orangeStart, fontSize: 12),
+                    label: Text(
+                      LocaleService.buyLicenseBtn,
+                      style: const TextStyle(color: orangeStart, fontSize: 12),
                     ),
                   ),
                 ),
