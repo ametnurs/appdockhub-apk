@@ -445,15 +445,19 @@ async function handleGameLevelCleared(request, env) {
 }
 
 // ============================================================================
-// 2C. HANDLER S2S POSTBACK OFFERWALL (TOROX, CPALEAD, TIMEWALL, ADGATE, LOOTABLY)
-// Endpoint: /api/offerwall/postback?user_id={USER_ID}&amount={AMOUNT}&provider=torox&offer_name={OFFER_NAME}
+// 2C. HANDLER S2S POSTBACK OFFERWALL (OGADS, ADSTERRA, MONETAG, MOBIDEA, CPALEAD, CPAGRIP, TIMEWALL)
+// Endpoint: /api/offerwall/postback?user_id={USER_ID}&amount={AMOUNT}&provider=ogads&offer_name={OFFER_NAME}
 // ============================================================================
 async function handleOfferwallPostback(request, env, url) {
   const params = url.searchParams;
-  // Support parameter standar dari Torox (user_id, amount, oid), CPALead (subid, payout), TimeWall (uid, revenue), AdGate, dll
+  // Support parameter standar dari OGAds (aff_sub4), Monetag (var / ymid), Adsterra (subid), Mobidea (subid), CPALead (subid), CPAGrip (tracking_id), TimeWall (uid)
   const pairToken = (
     params.get('user_id') ||
+    params.get('aff_sub4') ||
     params.get('subid') ||
+    params.get('var') ||
+    params.get('ymid') ||
+    params.get('tracking_id') ||
     params.get('uid') ||
     params.get('sid') ||
     params.get('external_identifier') ||

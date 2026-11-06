@@ -4,7 +4,7 @@ import '../controllers/ads_controller.dart';
 import '../services/deep_link_service.dart';
 import '../widgets/banner_ad_widget.dart';
 
-/// Model Provider Offerwall CPA (Torox, CPALead, AdGate, TimeWall, Lootably, AyetStudios)
+/// Model Provider Offerwall, Smartlink & CPA
 class OfferwallProviderItem {
   final String id;
   final String name;
@@ -29,9 +29,9 @@ class OfferwallProviderItem {
   String buildUrl(String userId) => baseUrl.replaceAll('{USER_ID}', Uri.encodeComponent(userId));
 }
 
-/// AdsHubScreen (Offerwall Center): Menampilkan daftar jaringan CPA Offerwall
-/// seperti Torox, CPALead, AdGate Media, TimeWall, Lootably, dan AyetStudios
-/// beserta Video Rewarded AdMob & sinkronisasi otomatis ke saldo pengguna via SubID/PairToken.
+/// AdsHubScreen (Offerwall & Smartlink Center):
+/// Menampilkan jaringan yang sudah ACC & Instant Approval:
+/// OGAds, Adsterra, Monetag, Mobidea, CPALead, CPAGrip, dan TimeWall.
 class AdsHubScreen extends StatefulWidget {
   final AdsController adsController;
 
@@ -42,67 +42,77 @@ class AdsHubScreen extends StatefulWidget {
 }
 
 class _AdsHubScreenState extends State<AdsHubScreen> {
-  // Daftar Jaringan Offerwall Utama (Ganti App ID / Pub ID sesuai akun dashboard masing-masing)
+  // Daftar Jaringan Offerwall & Smartlink (Ganti URL dengan Link Offerwall / Direct Smartlink dari dashboard Anda)
   static const List<OfferwallProviderItem> _offerwallProviders = [
     OfferwallProviderItem(
-      id: 'torox',
-      name: 'Torox (OfferToro)',
-      badge: '🔥 TOP PAYOUT',
-      subtitle: 'Install aplikasi, mainkan game & selesaikan misi cepat.',
-      rewardRange: 'Rp 500 - Rp 150.000 / Misi',
+      id: 'ogads',
+      name: 'OGAds Mobile Offerwall',
+      badge: '🔥 TOP MOBILE CPI',
+      subtitle: 'Install aplikasi Android & selesaikan misi singkat.',
+      rewardRange: 'Rp 500 - Rp 100.000 / Misi',
       gradientColors: [Color(0xFFFF5E00), Color(0xFFFF9900)],
-      icon: Icons.bolt_rounded,
-      baseUrl: 'https://torox.io/ifr/show/YOUR_TOROX_PUB_ID/{USER_ID}/YOUR_APP_ID',
+      icon: Icons.phone_android_rounded,
+      baseUrl: 'https://locked1.com/cl/i/YOUR_OGADS_LOCKER_ID?aff_sub4={USER_ID}',
+    ),
+    OfferwallProviderItem(
+      id: 'adsterra',
+      name: 'Adsterra Smartlink',
+      badge: '⚡ INSTANT TASK',
+      subtitle: 'Kunjungi halaman sponsor & klaim bonus kunjungan.',
+      rewardRange: 'Rp 100 - Rp 25.000 / Tugas',
+      gradientColors: [Color(0xFFE11D48), Color(0xFFFB7185)],
+      icon: Icons.ads_click_rounded,
+      baseUrl: 'https://www.highratecpm.com/YOUR_ADSTERRA_SMARTLINK_KEY?subid={USER_ID}',
+    ),
+    OfferwallProviderItem(
+      id: 'monetag',
+      name: 'Monetag Direct Task',
+      badge: '💎 CEPAT CAIR',
+      subtitle: 'Buka penawaran sponsor instan & selesaikan aksi mudah.',
+      rewardRange: 'Rp 100 - Rp 30.000 / Tugas',
+      gradientColors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
+      icon: Icons.flash_on_rounded,
+      baseUrl: 'https://otieu.com/4/YOUR_MONETAG_ZONE_ID?var={USER_ID}',
+    ),
+    OfferwallProviderItem(
+      id: 'mobidea',
+      name: 'Mobidea SmartCPA',
+      badge: '🚀 HIGH PAYOUT',
+      subtitle: 'Penawaran aplikasi & konten premium otomatis sesuai operator.',
+      rewardRange: 'Rp 500 - Rp 120.000 / Misi',
+      gradientColors: [Color(0xFF059669), Color(0xFF10B981)],
+      icon: Icons.rocket_launch_rounded,
+      baseUrl: 'https://www.mobidea.com/smartlink/?id=YOUR_MOBIDEA_ID&subid={USER_ID}',
     ),
     OfferwallProviderItem(
       id: 'cpalead',
       name: 'CPALead Offerwall',
-      badge: '⚡ INSTANT CREDIT',
+      badge: '✅ AUTO APPROVE',
       subtitle: 'Survey singkat, unduh aplikasi & penawaran CPA instan.',
       rewardRange: 'Rp 300 - Rp 75.000 / Misi',
       gradientColors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-      icon: Icons.rocket_launch_rounded,
+      icon: Icons.bolt_rounded,
       baseUrl: 'https://www.cpalead.com/mobile/locker/?pub=YOUR_CPALEAD_ID&subid={USER_ID}',
+    ),
+    OfferwallProviderItem(
+      id: 'cpagrip',
+      name: 'CPAGrip Offerwall',
+      badge: '🎁 MUDAH',
+      subtitle: 'Isi kuisioner singkat & registrasi aplikasi baru.',
+      rewardRange: 'Rp 400 - Rp 80.000 / Misi',
+      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
+      icon: Icons.card_giftcard_rounded,
+      baseUrl: 'https://www.cpagrip.com/show.php?l=0&u=YOUR_CPAGRIP_UID&id=YOUR_WALL_ID&tracking_id={USER_ID}',
     ),
     OfferwallProviderItem(
       id: 'timewall',
       name: 'TimeWall Micro-Tasks',
-      badge: '🎯 MUDAH',
-      subtitle: 'Klik iklan, tugas mikro & survey harian bayaran tinggi.',
+      badge: '🎯 TUGAS HARIAN',
+      subtitle: 'Klik iklan, lihat situs web & tugas mikro harian.',
       rewardRange: 'Rp 200 - Rp 50.000 / Tugas',
-      gradientColors: [Color(0xFF059669), Color(0xFF10B981)],
+      gradientColors: [Color(0xFFD97706), Color(0xFFFBBF24)],
       icon: Icons.task_alt_rounded,
       baseUrl: 'https://timewall.io/users/login?oid=YOUR_TIMEWALL_OID&uid={USER_ID}',
-    ),
-    OfferwallProviderItem(
-      id: 'adgate',
-      name: 'AdGate Media',
-      badge: '💎 PREMIUM',
-      subtitle: 'Selesaikan level game populer & penawaran eksklusif.',
-      rewardRange: 'Rp 1.000 - Rp 200.000 / Misi',
-      gradientColors: [Color(0xFF7C3AED), Color(0xFFA855F7)],
-      icon: Icons.diamond_rounded,
-      baseUrl: 'https://wall.adgaterewards.com/YOUR_ADGATE_WALL_CODE/{USER_ID}',
-    ),
-    OfferwallProviderItem(
-      id: 'lootably',
-      name: 'Lootably Offerwall',
-      badge: '🎁 BONUS TINGGI',
-      subtitle: 'Tonton video, kuisioner & uji coba aplikasi baru.',
-      rewardRange: 'Rp 400 - Rp 100.000 / Misi',
-      gradientColors: [Color(0xFFE11D48), Color(0xFFFB7185)],
-      icon: Icons.card_giftcard_rounded,
-      baseUrl: 'https://wall.lootably.com/?placementID=YOUR_LOOTABLY_ID&sid={USER_ID}',
-    ),
-    OfferwallProviderItem(
-      id: 'ayetstudios',
-      name: 'ayeT-Studios',
-      badge: '🎮 GAMING CPA',
-      subtitle: 'Misi instalasi & pencapaian level aplikasi Android.',
-      rewardRange: 'Rp 1.000 - Rp 120.000 / Misi',
-      gradientColors: [Color(0xFFD97706), Color(0xFFFBBF24)],
-      icon: Icons.sports_esports_rounded,
-      baseUrl: 'https://www.ayetstudios.com/offers/web_offerwall/YOUR_AYET_ADSLOT?external_identifier={USER_ID}',
     ),
   ];
 
@@ -192,13 +202,13 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '📌 Cara Kerja Otomatis:',
+                      '📌 Cara Klaim Reward:',
                       style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      '1. Pilih penawaran aplikasi / survey di halaman Offerwall.\n'
-                      '2. Selesaikan instruksi sampai tuntas.\n'
+                      '1. Klik tombol di bawah untuk membuka halaman penawaran.\n'
+                      '2. Selesaikan misi (Install App / Survey / Kunjungan Sponsor).\n'
                       '3. Saldo Rupiah otomatis masuk ke akun Anda melalui Postback Server.',
                       style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, height: 1.45),
                     ),
@@ -264,12 +274,12 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               _buildQuickVideoCard(controller),
               const SizedBox(height: 20),
 
-              // 3. JUDUL DAFTAR MITRA OFFERWALL (TOROX, CPALEAD, DLL)
+              // 3. JUDUL DAFTAR MITRA OFFERWALL (OGADS, ADSTERRA, MONETAG, MOBIDEA, DLL)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    '🔥 Jaringan Offerwall & CPA',
+                    '🔥 Offerwall & Smartlink Tugas',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -295,12 +305,12 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Selesaikan tugas install aplikasi, game, atau survey dari Torox, CPALead & mitra resmi untuk klaim saldo besar.',
+                'Selesaikan misi dari OGAds, Adsterra, Monetag, Mobidea & CPALead untuk mengumpulkan saldo tambahan.',
                 style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.35),
               ),
               const SizedBox(height: 14),
 
-              // 4. GRID / LIST KARTU PROVIDER OFFERWALL
+              // 4. LIST KARTU PROVIDER OFFERWALL
               ..._offerwallProviders.map((p) => _buildOfferwallCard(p)),
 
               const SizedBox(height: 12),
@@ -357,7 +367,7 @@ class _AdsHubScreenState extends State<AdsHubScreen> {
                   ),
                 ),
                 Text(
-                  'Torox • CPALead • TimeWall • AdGate',
+                  'OGAds • Adsterra • Monetag • Mobidea',
                   style: TextStyle(
                     color: Color(0xFF38BDF8),
                     fontSize: 11,
