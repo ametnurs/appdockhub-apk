@@ -153,11 +153,13 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       backdrop-filter: blur(6px);
       opacity: 1;
       transition: opacity 0.22s ease;
+      pointer-events: auto;
     }
 
     .overlay-screen.hidden {
+      display: none !important;
       opacity: 0;
-      pointer-events: none;
+      pointer-events: none !important;
     }
 
     .panel {
@@ -275,6 +277,10 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
       background: linear-gradient(135deg, #00f0ff 0%, #39fffa 50%, #00c4ff 100%);
       box-shadow: 0 0 22px rgba(0, 240, 255, 0.55), 0 4px 14px rgba(0, 0, 0, 0.45);
       cursor: pointer;
+      pointer-events: auto;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .btn-primary.reward-btn {
@@ -409,7 +415,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         <p class="desc-text">
           Selesaikan game di setiap level dan tonton video iklan untuk mengklaim reward saldo serta membuka level berikutnya!
         </p>
-        <button class="btn-primary" id="btn-start">MULAI GAME</button>
+        <button class="btn-primary" id="btn-start" onclick="window.startNewGame()">MULAI GAME</button>
       </div>
     </div>
 
@@ -443,7 +449,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         </div>
 
         <!-- Tombol Wajib Nonton Iklan (Satu-satunya jalan untuk lanjut) -->
-        <button class="btn-primary reward-btn" id="btn-claim-reward" style="margin-bottom: 0;">
+        <button class="btn-primary reward-btn" id="btn-claim-reward" onclick="window.claimReward()" style="margin-bottom: 0;">
           📺 NONTON IKLAN & BUKA GAME BERIKUTNYA (+RP 10)
         </button>
       </div>
@@ -466,7 +472,7 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
           </div>
         </div>
 
-        <button class="btn-primary danger-btn" id="btn-retry">COBA LAGI</button>
+        <button class="btn-primary danger-btn" id="btn-retry" onclick="window.retryGame()">COBA LAGI</button>
       </div>
     </div>
   </div>
@@ -696,16 +702,15 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
             }));
           }
         }
-              stage: this.stage
-            }));
-          }
-        }
 
         setState(newState) {
           this.state = newState;
           this.screenStart.classList.toggle('hidden', newState !== 'START');
           this.screenClear.classList.toggle('hidden', newState !== 'LEVEL_CLEAR');
           this.screenGameover.classList.toggle('hidden', newState !== 'GAME_OVER');
+          this.screenStart.style.display = (newState === 'START') ? 'flex' : 'none';
+          this.screenClear.style.display = (newState === 'LEVEL_CLEAR') ? 'flex' : 'none';
+          this.screenGameover.style.display = (newState === 'GAME_OVER') ? 'flex' : 'none';
         }
 
         bindEvents() {
@@ -716,28 +721,50 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
             if (this.state === 'PLAYING') this.fireNode();
           });
 
-          document.getElementById('btn-start').addEventListener('click', () => this.startNewGame());
-          document.getElementById('btn-retry').addEventListener('click', () => {
-            this.loadStage(this.level, this.stage);
-            this.setState('PLAYING');
-          });
+          const startBtn = document.getElementById('btn-start');
+          if (startBtn) {
+            startBtn.addEventListener('click', (e) => {
+              if (e) e.stopPropagation();
+              this.startNewGame();
+            });
+            startBtn.addEventListener('touchend', (e) => {
+              if (e) e.stopPropagation();
+              this.startNewGame();
+            });
+          }
+
+          const retryBtn = document.getElementById('btn-retry');
+          if (retryBtn) {
+            retryBtn.addEventListener('click', (e) => {
+              if (e) e.stopPropagation();
+              this.loadStage(this.level, this.stage);
+              this.setState('PLAYING');
+            });
+          }
 
           // Bridge: Klaim reward nonton video (1 game = 1 video iklan)
-          document.getElementById('btn-claim-reward').addEventListener('click', () => {
-            if (window.FlutterBridge) {
-              window.FlutterBridge.postMessage(JSON.stringify({
-                event: 'WATCH_AD',
-                level: this.level,
-                stage: this.stage
-              }));
-            }
-          });
+          const claimBtn = document.getElementById('btn-claim-reward');
+          if (claimBtn) {
+            claimBtn.addEventListener('click', (e) => {
+              if (e) e.stopPropagation();
+              if (window.FlutterBridge) {
+                window.FlutterBridge.postMessage(JSON.stringify({
+                  event: 'WATCH_AD',
+                  level: this.level,
+                  stage: this.stage
+                }));
+              }
+            });
+          }
 
-          document.getElementById('btn-sound').addEventListener('click', () => {
-            this.sound.toggleMute();
-            document.getElementById('icon-sound-on').style.display = this.sound.muted ? 'none' : 'block';
-            document.getElementById('icon-sound-off').style.display = this.sound.muted ? 'block' : 'none';
-          });
+          const soundBtn = document.getElementById('btn-sound');
+          if (soundBtn) {
+            soundBtn.addEventListener('click', () => {
+              this.sound.toggleMute();
+              document.getElementById('icon-sound-on').style.display = this.sound.muted ? 'none' : 'block';
+              document.getElementById('icon-sound-off').style.display = this.sound.muted ? 'block' : 'none';
+            });
+          }
         }
 
         advanceNext() {
@@ -952,9 +979,48 @@ const String cyberOrbitGameHtml = '''<!DOCTYPE html>
         }
       }
 
-      window.addEventListener('DOMContentLoaded', () => {
-        window.gameInstance = new CyberOrbitGame();
-      });
+      function initGame() {
+        if (!window.gameInstance) {
+          window.gameInstance = new CyberOrbitGame();
+        }
+        return window.gameInstance;
+      }
+
+      window.startNewGame = function() {
+        const game = initGame();
+        if (game) {
+          game.startNewGame();
+        }
+      };
+
+      window.claimReward = function() {
+        const game = initGame();
+        if (window.FlutterBridge) {
+          const lvl = game ? game.level : 1;
+          const stg = game ? game.stage : 1;
+          window.FlutterBridge.postMessage(JSON.stringify({
+            event: 'WATCH_AD',
+            level: lvl,
+            stage: stg
+          }));
+        }
+      };
+
+      window.retryGame = function() {
+        const game = initGame();
+        if (game) {
+          game.loadStage(game.level, game.stage);
+          game.setState('PLAYING');
+        }
+      };
+
+      // Inisialisasi game segera tanpa menunggu DOMContentLoaded jika sudah siap
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGame);
+      } else {
+        initGame();
+      }
+      setTimeout(initGame, 50);
 
       // Callback dari Flutter saat Reward berhasil masuk
       window.onRewardSuccess = function(amountText) {

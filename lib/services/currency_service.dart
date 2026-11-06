@@ -117,23 +117,23 @@ class CurrencyService {
     minWithdrawal: 3.00, // Minimal $3
   );
 
-  /// Dapatkan konfigurasi mata uang aktif saat ini
+  /// Dapatkan konfigurasi mata uang aktif saat ini (DEFAULT: IDR)
   static CurrencyConfig get current {
     if (_current != null) return _current!;
 
     try {
-      // Deteksi kode negara dari Locale sistem operasi pengguna
       final countryCode = PlatformDispatcher.instance.locale.countryCode?.toUpperCase();
       debugPrint('🌍 Deteksi Negara Pengguna: $countryCode');
 
-      if (countryCode != null && _countryMap.containsKey(countryCode)) {
+      // Jika pengguna secara spesifik dari negara selain ID dan terdaftar di map (misal MY, PH, dll)
+      if (countryCode != null && countryCode != 'US' && countryCode != 'ID' && _countryMap.containsKey(countryCode)) {
         _current = _countryMap[countryCode]!;
       } else {
-        // Jika user berada di luar negara terdaftar, gunakan standar global USD
-        _current = _usdGlobalDefault;
+        // DEFAULT CURRENCY UTAMA: IDR (Rupiah Indonesia)
+        _current = _countryMap['ID']!;
       }
     } catch (e) {
-      _current = _usdGlobalDefault;
+      _current = _countryMap['ID']!;
     }
 
     return _current!;
