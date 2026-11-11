@@ -78,6 +78,13 @@ const PRODUCTS = {
     prefix: 'X-PRO',
     hwidExample: 'X-HWID-XXXX-XXXX'
   },
+  'tiktok_downloader': {
+    name: 'TikTok Downloader Pro',
+    price: 99000,
+    formattedPrice: 'Rp 99.000',
+    prefix: 'TKDL-PRO',
+    hwidExample: 'TKDL-XXXX-XXXX-XXXX'
+  },
   'soft_a': {
     name: 'Jualin Aja',
     price: 299000,
@@ -103,7 +110,15 @@ const PRODUCT_ALIASES = {
   'live_manager': 'livetok_pro',
   'live_pro': 'livetok_pro',
   'livetok': 'livetok_pro',
-  'tk_pro': 'tiktok_pro'
+  'tk_pro': 'tiktok_pro',
+  'tiktok_downloader': 'tiktok_downloader',
+  'tiktokdownloader': 'tiktok_downloader',
+  'downloader': 'tiktok_downloader',
+  'downloader_pro': 'tiktok_downloader',
+  'tkdl': 'tiktok_downloader',
+  'tkdl_pro': 'tiktok_downloader',
+  'tiktok_dl': 'tiktok_downloader',
+  'tt_downloader': 'tiktok_downloader'
 };
 
 function resolveProductKey(rawKey) {
@@ -170,6 +185,12 @@ function verifyStatelessLicenseKey(hwid, licenseKey) {
     } else if (cleanKey.startsWith('JA-PRO-')) {
       matchedProdKey = 'soft_a';
       remainder = cleanKey.slice('JA-PRO-'.length);
+    } else if (cleanKey.startsWith('TKDL-PRO-')) {
+      matchedProdKey = 'tiktok_downloader';
+      remainder = cleanKey.slice('TKDL-PRO-'.length);
+    } else if (cleanKey.startsWith('TKPRO-')) {
+      matchedProdKey = 'tiktok_downloader';
+      remainder = cleanKey.slice('TKPRO-'.length);
     }
   }
 
@@ -224,6 +245,9 @@ function detectProductKeyFromHwid(hwid) {
   if (upper.startsWith('TIKTOK-HWID-') || upper.startsWith('TK-HWID-') || upper.startsWith('TIKTOK-') || upper.startsWith('TK-')) {
     return 'tiktok_pro';
   }
+  if (upper.startsWith('TKDL-HWID-') || upper.startsWith('TKDL-') || upper.startsWith('TIKTOK-DL-') || upper.startsWith('DL-')) {
+    return 'tiktok_downloader';
+  }
   if (upper.startsWith('IN-HWID-') || upper.startsWith('IN-') || upper.startsWith('LINKEDIN-')) {
     return 'linkedin_pro';
   }
@@ -254,6 +278,7 @@ function isValidHwidInput(text) {
     'rd-hwid-', 'rd-', 'reddit-',
     'fb-hwid-', 'fb-', 'facebook-',
     'tiktok-hwid-', 'tk-hwid-', 'tiktok-', 'tk-', 'livetok-',
+    'tkdl-hwid-', 'tkdl-', 'tiktok-dl-', 'dl-',
     'in-hwid-', 'in-', 'linkedin-',
     'pin-hwid-', 'pin-', 'pinterest-',
     'x-hwid-', 'x-', 'twitter-',
@@ -592,6 +617,7 @@ export default {
           hostname.includes('pinterest') ? 'pinterest_pro' :
           hostname.includes('fb') ? 'fb_pro' :
           hostname.includes('livetok') ? 'livetok_pro' :
+          hostname.includes('downloader') || hostname.includes('tkdl') ? 'tiktok_downloader' :
           hostname.includes('tiktok') ? 'tiktok_pro' :
           hostname.includes('x.') ? 'x_pro' : 'soft_a'
         );
@@ -2230,6 +2256,7 @@ async function handleTelegramUpdate(update, env, workerOrigin = 'https://appdock
       const keyboard = {
         inline_keyboard: [
           [{ text: '⚡ TikTok Brutal Content Pro (Rp 99.000)', callback_data: `buy_brutal_pro_ref_${refId}` }],
+          [{ text: '📥 TikTok Downloader Pro (Rp 99.000)', callback_data: `buy_tiktok_downloader_ref_${refId}` }],
           [{ text: '🔥 Reddit Manager Pro (Rp 99.000)', callback_data: `buy_reddit_pro_ref_${refId}` }],
           [{ text: '🔵 Facebook Account Manager Pro (Rp 99.000)', callback_data: `buy_fb_pro_ref_${refId}` }],
           [{ text: '📱 TikTok Manager Pro (Rp 99.000)', callback_data: `buy_tiktok_pro_ref_${refId}` }],
@@ -2267,6 +2294,7 @@ async function handleTelegramUpdate(update, env, workerOrigin = 'https://appdock
         `• *Reddit Pro:* \`https://appdockhub.com/redit.html?ref=${chatId}\`\n` +
         `• *Facebook Pro:* \`https://appdockhub.com/facebook.html?ref=${chatId}\`\n` +
         `• *TikTok Manager Pro:* \`https://appdockhub.com/tiktok.html?ref=${chatId}\`\n` +
+        `• *TikTok Downloader Pro:* \`https://appdockhub.com/downloader.html?ref=${chatId}\`\n` +
         `• *TikTok Live Manager Pro:* \`https://appdockhub.com/livetok.html?ref=${chatId}\`\n` +
         `• *LinkedIn Pro:* \`https://appdockhub.com/linkedin.html?ref=${chatId}\`\n` +
         `• *Pinterest Pro:* \`https://appdockhub.com/pinterest.html?ref=${chatId}\`\n` +
@@ -4067,6 +4095,24 @@ const DEFAULT_PROMO_ITEMS = [
       '✅ *Studio AI Multimodal:* Generator skenario iklan dari foto produk & talent via Gemini AI.\n' +
       '✅ *Bypass Deteksi TikTok:* Acak hash, rotasi mikro speed 0.98x - 1.02x & color jitter.\n\n' +
       '💰 *Harga Lisensi:* Rp 99.000 (1 Lisensi = 1 Device)\n' +
+      '🎁 *Bonus Afiliasi:* Komisi 30% Tier 1 (Rp 29.700) + 5% Tier 2 Pasif seumur hidup!\n\n' +
+      '👇 *Beli Lisensi Resmi via Bot Telegram:*\n{LINK}',
+    media_url: null,
+    media_type: null,
+    media_id: null
+  },
+  {
+    item_key: 'soft_tiktok_downloader',
+    category: 'software',
+    title: '📥 TikTok Bulk Downloader Pro (Rp 99rb)',
+    content: '📥 *TIKTOK BULK DOWNLOADER PRO & KAMERA HP UNIK*\n\n' +
+      'Software download ribuan video TikTok sekali klik tanpa watermark, dilengkapi fitur unik sensor kamera HP (iPhone 15 Pro / Samsung S24) otomatis anti-banned re-upload!\n\n' +
+      '⚡ *FITUR UNGGULAN:*\n' +
+      '✅ *Bulk Download 1-Klik:* Unduh seluruh video dari profil username, hashtag, atau puluhan link TikTok sekaligus.\n' +
+      '✅ *Mode Kamera HP Unik:* Mikro-zoom, sensor grain noise, ISP sharpening, dan injeksi metadata kamera HP asli.\n' +
+      '✅ *Format 100% MP4 H.264:* Bebas error HEVC dan lancar di semua video editor & player.\n' +
+      '✅ *Ekspor Audio MP3 & Video HD:* Ekstraksi suara jernih atau video kualitas tinggi.\n\n' +
+      '💰 *Harga Lisensi:* Rp 99.000 (1 Lisensi = 1 Perangkat Seumur Hidup)\n' +
       '🎁 *Bonus Afiliasi:* Komisi 30% Tier 1 (Rp 29.700) + 5% Tier 2 Pasif seumur hidup!\n\n' +
       '👇 *Beli Lisensi Resmi via Bot Telegram:*\n{LINK}',
     media_url: null,
