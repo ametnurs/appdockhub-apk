@@ -4693,13 +4693,29 @@ async function sendPromoItemDetail(chatId, itemKey, env) {
 
     const isSoundManager = item.item_key.includes('sound') || (softProdKey && softProdKey.startsWith('sm_'));
 
-    webLink = item.category === 'game'
-      ? `https://appdockhub.com/cyber-orbit.html?ref=${chatId}`
-      : (isSoundManager
-        ? `https://appdockhub.com/soundmanager.html?ref=${chatId}`
-        : (isJualin
-        ? `https://appdockhub.com/jualinaja.html?ref=${chatId}`
-      : (isFb ? `https://appdockhub.com/facebook.html?ref=${chatId}` : (isLinkedin ? `https://appdockhub.com/linkedin.html?ref=${chatId}` : (isPinterest ? `https://appdockhub.com/pinterest.html?ref=${chatId}` : (isLiveTok ? `https://appdockhub.com/livetok.html?ref=${chatId}` : (isTikTok ? `https://appdockhub.com/tiktok.html?ref=${chatId}` : (isReddit ? `https://appdockhub.com/reddit.html?ref=${chatId}` : (isX ? `https://appdockhub.com/x.html?ref=${chatId}` : `https://appdockhub.com/index.html?ref=${chatId}`))))))));
+    if (item.category === 'game') {
+      webLink = `https://appdockhub.com/cyber-orbit.html?ref=${chatId}`;
+    } else if (isSoundManager) {
+      webLink = `https://appdockhub.com/soundmanager.html?ref=${chatId}`;
+    } else if (isJualin) {
+      webLink = `https://appdockhub.com/jualinaja.html?ref=${chatId}`;
+    } else if (isFb) {
+      webLink = `https://appdockhub.com/facebook.html?ref=${chatId}`;
+    } else if (isLinkedin) {
+      webLink = `https://appdockhub.com/linkedin.html?ref=${chatId}`;
+    } else if (isPinterest) {
+      webLink = `https://appdockhub.com/pinterest.html?ref=${chatId}`;
+    } else if (isLiveTok) {
+      webLink = `https://appdockhub.com/livetok.html?ref=${chatId}`;
+    } else if (isTikTok) {
+      webLink = `https://appdockhub.com/tiktok.html?ref=${chatId}`;
+    } else if (isReddit) {
+      webLink = `https://appdockhub.com/reddit.html?ref=${chatId}`;
+    } else if (isX) {
+      webLink = `https://appdockhub.com/x.html?ref=${chatId}`;
+    } else {
+      webLink = `https://appdockhub.com/index.html?ref=${chatId}`;
+    }
 
     if (finalContent.includes('{LINK}')) {
       finalContent = finalContent.replace(/\{LINK\}/g, personalLink);
