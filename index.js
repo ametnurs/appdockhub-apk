@@ -91,6 +91,27 @@ const PRODUCTS = {
     formattedPrice: 'Rp 299.000',
     prefix: 'LIC',
     hwidExample: 'HWID-XXXX-XXXX'
+  },
+  'sm_30d': {
+    name: 'Sound Manager AI Studio (30 Hari)',
+    price: 99000,
+    formattedPrice: 'Rp 99.000',
+    prefix: 'SM30',
+    hwidExample: 'SM-HWID-XXXX-XXXX'
+  },
+  'sm_6m': {
+    name: 'Sound Manager AI Studio (6 Bulan)',
+    price: 499000,
+    formattedPrice: 'Rp 499.000',
+    prefix: 'SM6M',
+    hwidExample: 'SM-HWID-XXXX-XXXX'
+  },
+  'sm_lifetime': {
+    name: 'Sound Manager AI Studio (Lifetime)',
+    price: 1500000,
+    formattedPrice: 'Rp 1.500.000',
+    prefix: 'SMLIFE',
+    hwidExample: 'SM-HWID-XXXX-XXXX'
   }
 };
 
@@ -118,7 +139,23 @@ const PRODUCT_ALIASES = {
   'tkdl': 'tiktok_downloader',
   'tkdl_pro': 'tiktok_downloader',
   'tiktok_dl': 'tiktok_downloader',
-  'tt_downloader': 'tiktok_downloader'
+  'tt_downloader': 'tiktok_downloader',
+  'soundmanager': 'sm_30d',
+  'sound_manager': 'sm_30d',
+  'soundmanager_ai': 'sm_30d',
+  'sound_manager_ai': 'sm_30d',
+  'sm': 'sm_30d',
+  'sm_30': 'sm_30d',
+  'sm30': 'sm_30d',
+  'sm_30d': 'sm_30d',
+  'sm_6m': 'sm_6m',
+  'sm6m': 'sm_6m',
+  'sm_life': 'sm_lifetime',
+  'sm_lifetime': 'sm_lifetime',
+  'smlife': 'sm_lifetime',
+  'soundmanager_30d': 'sm_30d',
+  'soundmanager_6m': 'sm_6m',
+  'soundmanager_lifetime': 'sm_lifetime'
 };
 
 function resolveProductKey(rawKey) {
@@ -191,6 +228,15 @@ function verifyStatelessLicenseKey(hwid, licenseKey) {
     } else if (cleanKey.startsWith('TKPRO-')) {
       matchedProdKey = 'tiktok_downloader';
       remainder = cleanKey.slice('TKPRO-'.length);
+    } else if (cleanKey.startsWith('SM-') || cleanKey.startsWith('SM30-')) {
+      matchedProdKey = 'sm_30d';
+      remainder = cleanKey.slice(cleanKey.startsWith('SM30-') ? 'SM30-'.length : 'SM-'.length);
+    } else if (cleanKey.startsWith('SM6M-')) {
+      matchedProdKey = 'sm_6m';
+      remainder = cleanKey.slice('SM6M-'.length);
+    } else if (cleanKey.startsWith('SMLIFE-')) {
+      matchedProdKey = 'sm_lifetime';
+      remainder = cleanKey.slice('SMLIFE-'.length);
     }
   }
 
@@ -260,6 +306,9 @@ function detectProductKeyFromHwid(hwid) {
   if (upper.startsWith('JA-HWID-') || upper.startsWith('JA-') || upper.startsWith('JUALIN-') || upper.startsWith('HWID-')) {
     return 'soft_a';
   }
+  if (upper.startsWith('SM-HWID-') || upper.startsWith('SM-') || upper.startsWith('SOUND-') || upper.startsWith('SOUNDMANAGER-')) {
+    return 'sm_30d';
+  }
   return null;
 }
 
@@ -283,6 +332,7 @@ function isValidHwidInput(text) {
     'pin-hwid-', 'pin-', 'pinterest-',
     'x-hwid-', 'x-', 'twitter-',
     'ja-hwid-', 'ja-', 'jualin-',
+    'sm-hwid-', 'sm-', 'sound-', 'soundmanager-',
     'hwid-', 'hwid_', 'lic-'
   ];
   return prefixes.some(pre => lower.startsWith(pre));
@@ -617,6 +667,7 @@ export default {
           hostname.includes('pinterest') ? 'pinterest_pro' :
           hostname.includes('fb') ? 'fb_pro' :
           hostname.includes('livetok') ? 'livetok_pro' :
+          hostname.includes('soundmanager') || hostname.includes('sound') ? 'sm_30d' :
           hostname.includes('downloader') || hostname.includes('tkdl') ? 'tiktok_downloader' :
           hostname.includes('tiktok') ? 'tiktok_pro' :
           hostname.includes('x.') ? 'x_pro' : 'soft_a'
@@ -2255,6 +2306,9 @@ async function handleTelegramUpdate(update, env, workerOrigin = 'https://appdock
 
       const keyboard = {
         inline_keyboard: [
+          [{ text: '🎵 Sound Manager AI (30 Hari - Rp 99.000)', callback_data: `buy_sm_30d_ref_${refId}` }],
+          [{ text: '🎵 Sound Manager AI (6 Bulan - Rp 499.000)', callback_data: `buy_sm_6m_ref_${refId}` }],
+          [{ text: '💎 Sound Manager AI (Lifetime - Rp 1.500.000)', callback_data: `buy_sm_lifetime_ref_${refId}` }],
           [{ text: '⚡ TikTok Brutal Content Pro (Rp 99.000)', callback_data: `buy_brutal_pro_ref_${refId}` }],
           [{ text: '📥 TikTok Downloader Pro (Rp 99.000)', callback_data: `buy_tiktok_downloader_ref_${refId}` }],
           [{ text: '🔥 Reddit Manager Pro (Rp 99.000)', callback_data: `buy_reddit_pro_ref_${refId}` }],
@@ -3036,6 +3090,28 @@ async function sendTelegramVideo(chatId, videoId, caption, replyMarkup = null) {
 // 5B. SISTEM ALAT PROMOSI & BERITA DINAMIS (SUPPORT D1 + KV + MEMORY CACHE)
 // ============================================================================
 const DEFAULT_PROMO_ITEMS = [
+  {
+    item_key: 'promo_soundmanager_ai',
+    category: 'software',
+    title: '🎵 Sound Manager AI Studio (Komisi 30% s/d Rp 450.000)',
+    content: '🔥 *GENERATE PULUHAN LAGU & VOKAL AI OTOMATIS — SIAP MONETISASI!* 🎧\n\n' +
+      'Bikin lagu viral lengkap dengan vokal AI sekarang cukup sekali klik tanpa sewa studio musik mahal!\n\n' +
+      '✨ *Fitur Unggulan Sound Manager AI Studio:*\n' +
+      '• 🎼 18+ Genre Populer: Dangdut Koplo, Indo Pop Galau, DJ Jedag Jedug, Brazilian Phonk, Lo-Fi, Synthwave, dll.\n' +
+      '• 🎤 11 Bahasa Vokal AI: Indonesia, Jawa Koplo, Sunda, Melayu, English, Japanese, Korean, dll.\n' +
+      '• 🔄 Smart Multi-Account Pool: Rotasi akun AI otomatis anti-limit kuota!\n' +
+      '• 🎚️ Audio DSP Mastering: Normalisasi -14 LUFS Spotify Standard (WAV Master & 320kbps MP3).\n' +
+      '• 🎨 Auto Cover Art 3000x3000px Ultra HD siap submit agregator (DistroKid, TuneCore, Spotify, TikTok Sound).\n' +
+      '• 💰 100% Hak Komersial & Royalti Streaming.\n\n' +
+      '⚡ *Harga Lisensi Resmi:*\n' +
+      '• 30 Hari: Rp 99.000\n' +
+      '• 6 Bulan: Rp 499.000\n' +
+      '• Lifetime VIP: Rp 1.500.000\n\n' +
+      '👉 Pesan Langsung di Bot Telegram:\n{LINK}\n\n' +
+      '🌐 Pelajari & Demo Musik di Web:\n{WEB_LINK}',
+    media_type: null,
+    media_id: null
+  },
   {
     item_key: 'promo_live_shorts',
     category: 'live_stream',
@@ -4615,9 +4691,13 @@ async function sendPromoItemDetail(chatId, itemKey, env) {
       ? (gameSlug === 'cyber-orbit' ? `https://appdockhub.com/play?ref=${chatId}` : `https://appdockhub.com/play?ref=${chatId}&game=${gameSlug}`)
       : (softProdKey ? `https://t.me/${CONFIG.BOT_USERNAME}?start=buy_${softProdKey}_ref_${chatId}` : `https://t.me/${CONFIG.BOT_USERNAME}?start=ref_${chatId}`);
 
+    const isSoundManager = item.item_key.includes('sound') || (softProdKey && softProdKey.startsWith('sm_'));
+
     webLink = item.category === 'game'
       ? `https://appdockhub.com/cyber-orbit.html?ref=${chatId}`
-      : (isJualin
+      : (isSoundManager
+        ? `https://appdockhub.com/soundmanager.html?ref=${chatId}`
+        : (isJualin
         ? `https://appdockhub.com/jualinaja.html?ref=${chatId}`
       : (isFb ? `https://appdockhub.com/facebook.html?ref=${chatId}` : (isLinkedin ? `https://appdockhub.com/linkedin.html?ref=${chatId}` : (isPinterest ? `https://appdockhub.com/pinterest.html?ref=${chatId}` : (isLiveTok ? `https://appdockhub.com/livetok.html?ref=${chatId}` : (isTikTok ? `https://appdockhub.com/tiktok.html?ref=${chatId}` : (isReddit ? `https://appdockhub.com/reddit.html?ref=${chatId}` : (isX ? `https://appdockhub.com/x.html?ref=${chatId}` : `https://appdockhub.com/index.html?ref=${chatId}`))))))));
 
