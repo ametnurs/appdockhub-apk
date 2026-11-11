@@ -593,7 +593,7 @@ export default {
         const text = url.searchParams.get('text') || 'Halo';
         const lang = url.searchParams.get('lang') || 'id';
         const q = encodeURIComponent(text.slice(0, 200));
-        const ttsUrl = https://translate.google.com/translate_tts?ie=UTF-8&q=&tl=&client=tw-ob;
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=${lang}&client=tw-ob`;
         const ttsResp = await fetch(ttsUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
         });
@@ -2289,7 +2289,7 @@ async function handleTelegramUpdate(update, env, workerOrigin = 'https://appdock
         `🌐 *1. Link Web Katalog Utama (Semua Produk):*\n` +
         `\`${webCatalogLink}\`\n\n` +
         `🚀 *2. Link Landing Page Penjualan Per Produk:*\n` +
-        • *TikTok Brutal Content Pro:* \https://brutalcontent.appdockhub.com/?ref=\\n +
+        `• *TikTok Brutal Content Pro:* \`https://brutalcontent.appdockhub.com/?ref=${chatId}\`\n` +
         `• *Jualin Aja:* \`https://appdockhub.com/jualinaja.html?ref=${chatId}\`\n` +
         `• *Reddit Pro:* \`https://appdockhub.com/redit.html?ref=${chatId}\`\n` +
         `• *Facebook Pro:* \`https://appdockhub.com/facebook.html?ref=${chatId}\`\n` +
